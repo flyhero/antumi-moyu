@@ -1,0 +1,41 @@
+{
+ "id": 3192714,
+ "title": "开了个Google Ultra 20x，有什么隐藏权益可以领以及正常用argon周限有多少刀",
+ "fancy_title": "开了个Google Ultra 20x，有什么隐藏权益可以领以及正常用argon周限有多少刀",
+ "posts_count": 1,
+ "created_at": "2026-11-17T13:12:34.415Z",
+ "views": 29,
+ "reply_count": 0,
+ "like_count": 0,
+ "last_posted_at": "2026-11-17T13:12:34.566Z",
+ "slug": "topic",
+ "category_id": 11,
+ "closed": false,
+ "archived": false,
+ "highest_post_number": 1,
+ "post_stream": {
+  "posts": [
+   {
+    "id": 24894790,
+    "name": "inm",
+    "username": "inm",
+    "avatar_template": "/user_avatar/linux.do/inm/{size}/2487393_2.png",
+    "created_at": "2026-11-17T13:12:34.566Z",
+    "cooked": "<p>最近claude跳portal kyc被封，转而开了个ultra 20x试试哈基米，打算用argon辅助gpt来写论文。</p>\n<p>现在除了youtube premium和agy，想问一下佬友们还有什么隐藏权益是可以领的，google cloud的30T说实话我没什么需求。</p>\n<p>以及一般ultra只用argon的话周限大概有多少额度，和gpt20x用astra相比耐用吗？</p>",
+    "post_number": 1,
+    "post_type": 1,
+    "reply_count": 0,
+    "reply_to_post_number": null,
+    "reaction_users_count": 0,
+    "actions_summary": [],
+    "topic_id": 3192714,
+    "hidden": false,
+    "deleted_at": null,
+    "user_deleted": false
+   }
+  ],
+  "stream": [
+   24894790
+  ]
+ }
+}

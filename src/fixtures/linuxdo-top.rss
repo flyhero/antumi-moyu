@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:discourse="http://www.discourse.org/" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>LINUX DO - 热门话题</title>
+    <link>https://linux.do/top?period=yearly</link>
+    <description>热门话题</description>
+    <language>zh-CN</language>
+    <atom:link href="https://linux.do/top.rss?period=yearly" rel="self" type="application/rss+xml" />
+    <atom:link href="https://linux.do/top.md" rel="alternate" type="text/markdown" />
+      <lastBuildDate>Thu, 19 Mar 2026 05:59:00 +0000</lastBuildDate>
+        <item>
+          <title>应该是目前最强的PPT Agent，附上完整思路分享</title>
+          <dc:creator><![CDATA[Sandun]]></dc:creator>
+          <category>开发调优</category>
+          <description><![CDATA[
+            <p>哈喽佬友们，又又又好久不见。之前立了一个PPT Agent的Flag，折腾了好几个月，终于可以来给大家交作业了。</p>
+<p>先给大家看一些我们目前能生成的效果，后面我会把完整的思路分享出来。那以下页面，都是AI自动生成的，模型用的是Gemini 3的Flash版本。</p>
+<p></p><div class="lightbox-wrapper"><a class="lightbox" href="https://cdn3.ldstatic.com/original/4X/c/a/7/ca785958d37aba2c5e234af1f4d969945ae87b2f.jpeg" data-download-href="/uploads/short-url/sT8ikhvmKudxp590a0kI8cgWH7x.jpeg?dl=1" title="封面-1-设计稿 (1)"><img src="https://cdn3.ldstatic.com/optimized/4X/c/a/7/ca785958d37aba2c5e234af1f4d969945ae87b2f_2_690x388.jpeg" alt="封面-1-设计稿 (1)" data-base62-sha1="sT8ikhvmKudxp590a0kI8cgWH7x" width="690" height="388" srcset="https://cdn3.ldstatic.com/optimized/4X/c/a/7/ca785958d37aba2c5e234af1f4d969945ae87b2f_2_690x388.jpeg, https://cdn3.ldstatic.com/optimized/4X/c/a/7/ca785958d37aba2c5e234af1f4d969945ae87b2f_2_1035x582.jpeg 1.5x, https://cdn3.ldstatic.com/optimized/4X/c/a/7/ca785958d37aba2c5e234af1f4d969945ae87b2f_2_1380x776.jpeg 2x" data-dominant-color="1D203B"></a></div><p></p>
+<p></p><div class="lightbox-wrapper"><a class="lightbox" href="https://cdn3.ldstatic.com/original/4X/2/b/9/2b9fbeb40ca978629c4986e994c2abc701f00121.jpeg" data-download-href="/uploads/short-url/6dUMywerFW5jtjPfFlln1QBa8Mx.jpeg?dl=1" title="分层架构设计：从数据层到编排层-7-设计稿"><img src="https://cdn3.ldstatic.com/optimized/4X/2/b/9/2b9fbeb40ca978629c4986e994c2abc701f00121_2_690x388.jpeg" alt="分层架构设计：从数据层到编排层-7-设计稿" data-base62-sha1="6dUMywerFW5jtjPfFlln1QBa8Mx" width="690" height="388" srcset="https://cdn3.ldstatic.com/optimized/4X/2/b/9/2b9fbeb40ca978629c4986e994c2abc701f00121_2_690x388.jpeg, https://cdn3.ldstatic.com/optimized/4X/2/b/9/2b9fbeb40ca978629c4986e994c2abc701f00121_2_1035x582.jpeg 1.5x, https://cdn3.ldstatic.com/optimized/4X/2/b/9/2b9fbeb40ca978629c4986e994c2abc701f00121_2_1380x776.jpeg 2x" data-dominant-color="151F26"></a></div><p></p>
+<p></p><div class="lightbox-wrapper"><a class="lightbox" href="https://cdn3.ldstatic.com/original/4X/a/a/f/aaf137fb6a7a4ddff3c818a7c07cd5cb44562aea.jpeg" data-download-href="/uploads/short-url/oodYFNjVloVK9vgnFKRlEUWZWUW.jpeg?dl=1" title="核心硬件：AIoT智能家居与人车家全生态闭环-8-设计稿"><img src="https://cdn3.ldstatic.com/optimized/4X/a/a/f/aaf137fb6a7a4ddff3c818a7c07cd5cb44562aea_2_690x388.jpeg" alt="核心硬件：AIoT智能家居与人车家全生态闭环-8-设计稿" data-base62-sha1="oodYFNjVloVK9vgnFKRlEUWZWUW" width="690" height="388" srcset="https://cdn3.ldstatic.com/optimized/4X/a/a/f/aaf137fb6a7a4ddff3c818a7c07cd5cb44562aea_2_690x388.jpeg, https://cdn3.ldstatic.com/optimized/4X/a/a/f/aaf137fb6a7a4ddff3c818a7c07cd5cb44562aea_2_1035x582.jpeg 1.5x, https://cdn3.ldstatic.com/optimized/4X/a/a/f/aaf137fb6a7a4ddff3c818a7c07cd5cb44562aea_2_1380x776.jpeg 2x" data-dominant-color="221D19"></a></div><p></p>
+<p>可以搞定各种风格的设计：</p>
+<p></p><div class="lightbox-wrapper"><a class="lightbox" href="https://cdn3.ldstatic.com/original/4X/1/1/8/1181834e44162e2c873288ee999a8184e54380ad.jpeg" data-download-href="/uploads/short-url/2uRB1nKB91udUIXbIPbcTo4ctvn.jpeg?dl=1" title="微信图片_20260317175828_1476_1"><img src="https://cdn3.ldstatic.com/optimized/4X/1/1/8/1181834e44162e2c873288ee999a8184e54380ad_2_690x370.jpeg" alt="微信图片_20260317175828_1476_1" data-base62-sha1="2uRB1nKB91udUIXbIPbcTo4ctvn" width="690" height="370" srcset="https://cdn3.ldstatic.com/optimized/4X/1/1/8/1181834e44162e2c873288ee999a8184e54380ad_2_690x370.jpeg, https://cdn3.ldstatic.com/optimized/4X/1/1/8/1181834e44162e2c873288ee999a8184e54380ad_2_1035x555.jpeg 1.5x, https://cdn3.ldstatic.com/optimized/4X/1/1/8/1181834e44162e2c873288ee999a8184e54380ad_2_1380x740.jpeg 2x" data-dominant-color="EDEBEA"></a></div><p></p>
+<p></p><div class="lightbox-wrapper"><a class="lightbox" href="https://cdn3.ldstatic.com/original/4X/c/f/d/cfdbb2954d1b93ffc430c8a5652b3ef34f92dc5b.jpeg" data-download-href="/uploads/short-url/tENxfxkj5RC79jHsGJgsdJKFj3t.jpeg?dl=1" title="微信图片_20260317175833_1477_1"><img src="https://cdn3.ldstatic.com/optimized/4X/c/f/d/cfdbb2954d1b93ffc430c8a5652b3ef34f92dc5b_2_690x437.jpeg" alt="微信图片_20260317175833_1477_1" data-base62-sha1="tENxfxkj5RC79jHsGJgsdJKFj3t" width="690" height="437" srcset="https://cdn3.ldstatic.com/optimized/4X/c/f/d/cfdbb2954d1b93ffc430c8a5652b3ef34f92dc5b_2_690x437.jpeg, https://cdn3.ldstatic.com/optimized/4X/c/f/d/cfdbb2954d1b93ffc430c8a5652b3ef34f92dc5b_2_1035x655.jpeg 1.5x, https://cdn3.ldstatic.com/optimized/4X/c/f/d/cfdbb2954d1b93ffc430c8a5652b3ef34f92dc5b_2_1380x874.jpeg 2x" data-dominant-color="EDEFF4"></a></div><p></p>
+<p>你可能会想，这不就是又一个AI PPT玩具吗？</p>
+<p>不。你只需要给它一个主题，比如“Dify企业介绍”，然后就可以去泡杯咖啡了。它会像一个真正的专家团队那样，自己跑完从<strong>需求调研 → 资料搜集 → 大纲策划 → 生成策划稿 → 生成设计稿</strong>的全流程。</p>
+<p><img src="https://cdn3.ldstatic.com/original/4X/2/7/3/273349036183b47dd6873ff8a6fc4b7a269bc974.gif" alt="3333" data-base62-sha1="5AMuXGEQLHojJYEetuOG4vCQbCQ" width="270" height="250" class="animated"></p>
+<p>最后做出这样一套完整的设计：</p>
+<p><img src="https://cdn3.ldstatic.com/original/4X/f/1/a/f1aab7cf304e037dc060a30e2f22555a06a83a24.gif" alt="640 (5)" data-base62-sha1="ytSPAh3UNRa2GCN3ozKq0ZGt4oI" width="690" height="393" class="animated"></p>
+<p>因为是商业项目，发在这里不太合规矩，我也不提名字了。但是我还是挺想把我们做这个的完整思路，包括用到的一部分提示词分享给大家的。</p>
+<p>我可以非常自信地说，这绝对是一个你从未见过的PPT Agent思路。接下来的内容，希望能对你有所启发。</p>
+<blockquote>
+<p><strong>1.忘了“一键生成”，从“提问”开始</strong></p>
+</blockquote>
+<p>市面上几乎所有的AI PPT工具，都犯了一个致命的错误。</p>
+<p>你一输入主题，它就猴急地给你丢出一个粗糙大纲，然后用一堆现成的模板糊弄你，恨不得马上把花里胡哨的设计怼到你脸上。</p>
+<p><strong>但说真的，PPT的灵魂是内容，不是皮囊。</strong></p>
+<p>想想我们自己做PPT的流程：是不是得先搞清楚“为谁做？做什么？达到什么目的？”</p>
+<p>所以，我们让AI做的第一件事，就是<strong>像一个专业顾问一样去“需求调研”</strong> 。它会先去网上扒一圈相关资料，然后像模像样地问你几个关键问题，让你把真正的需求说清楚。</p>
+<p></p><div class="lightbox-wrapper"><a class="lightbox" href="https://cdn3.ldstatic.com/original/4X/f/4/5/f45478b3c2c96c726e50d357f2b776f372267dfc.webp" data-download-href="/uploads/short-url/yRrtTiIScTV9ioVkGuwGIHkVFdq.webp?dl=1" title="640 (3)"><img src="https://cdn3.ldstatic.com/optimized/4X/f/4/5/f45478b3c2c96c726e50d357f2b776f372267dfc_2_690x388.webp" alt="640 (3)" data-base62-sha1="yRrtTiIScTV9ioVkGuwGIHkVFdq" width="690" height="388" srcset="https://cdn3.ldstatic.com/optimized/4X/f/4/5/f45478b3c2c96c726e50d357f2b776f372267dfc_2_690x388.webp, https://cdn3.ldstatic.com/optimized/4X/f/4/5/f45478b3c2c96c726e50d357f2b776f372267dfc_2_1035x582.webp 1.5x, https://cdn3.ldstatic.com/original/4X/f/4/5/f45478b3c2c96c726e50d357f2b776f372267dfc.webp 2x" data-dominant-color="A0A3A7"></a></div><p></p>
+<p>只有当我们把需求聊透了，它才会结合搜集到的资料，去生成一份真正“有的放矢”的大纲。</p>
+<p>聊到大纲，我又把我用了多年的一个“笨方法”教给了AI——<strong>便利贴法</strong>。</p>
+<p>过去我做复杂PPT时，会把每一页的核心内容写在一张张便利贴上，贴满一墙。这样逻辑结构一目了然，哪里不好就撕掉，顺序不对就调换，高效又直观。</p>
+<p>现在，我们把它做进了产品里。<strong>每一个页面，就是一张“数字便利贴”</strong>，让你看得清清楚楚，调得明明白白。</p>
+<p><img src="https://cdn3.ldstatic.com/original/4X/1/c/e/1cec102727d58958c25d6da46a1955e063b95199.gif" alt="1" data-base62-sha1="47R8bvzBUk1fm9m6mfygjHFk7d7" width="690" height="415" class="animated"></p>
+<p>这个思路，你完全可以自己复现。在你动工前，先别急着打开PPT软件，试试把你的需求完整地告诉AI，让它扮演你的“PPT规划师”。</p>
+<p>下面这个我们项目在用的正式版Prompt，也<strong>直接开源</strong>给你，让你也能拥有一个顶级的“PPT结构架构师”：</p>
+<pre><code class="lang-auto"># Role: 顶级的PPT结构架构师
+
+## Profile
+- 版本：2.0 (Context-Aware)
+- 专业：PPT逻辑结构设计
+- 特长：运用金字塔原理，结合**背景调研信息**构建清晰的演示逻辑
+
+## Goals
+基于用户提供的 **PPT主题** 和 **背景调研信息 (Context)**，设计一份逻辑严密、层次清晰的PPT大纲。
+
+## Core Methodology: 金字塔原理
+1. 结论先行：每个部分以核心观点开篇
+2. 以上统下：上层观点是下层内容的总结
+3. 归类分组：同一层级的内容属于同一逻辑范畴
+4. 逻辑递进：内容按照某种逻辑顺序展开
+
+## 重要：利用调研信息
+你将获得一些关于主题的搜索摘要。请务必参考这些信息来规划大纲，使其切合当前的市场现状或技术事实，而不是凭空捏造。
+例如：如果调研显示"某技术已过时"，则不要将其作为核心推荐。
+
+## 输出规范
+请严格按照以下JSON格式输出，结果用[PPT_OUTLINE]和[/PPT_OUTLINE]包裹：
+
+[PPT_OUTLINE]
+{
+  "ppt_outline": {
+    "cover": {
+      "title": "引人注目的主标题",
+      "sub_title": "副标题",
+      "content": []
+    },
+    "table_of_contents": {
+      "title": "目录",
+      "content": ["第一部分标题", "第二部分标题", "..."]
+    },
+    "parts": [
+      {
+        "part_title": "第一部分：章节标题",
+        "pages": [
+          { "title": "页面标题1", "content": [] },
+          { "title": "页面标题2", "content": [] }
+        ]
+      }
+    ],
+    "end_page": {
+      "title": "总结与展望",
+      "content": []
+    }
+  }
+}
+[/PPT_OUTLINE]
+
+## Constraints
+1. 必须严格遵循JSON格式。
+2. **页数要求*：{{PAGE_REQUIREMENTS}}
+
+</code></pre>
+<blockquote>
+<p><strong>2.去大量检索资料。</strong></p>
+</blockquote>
+<p>大纲只是骨架，血肉需要真实、准确的信息来填充。这个因为很多工程上的问题，我们自己项目用的是国内的搜索接口。</p>
+<p></p><div class="lightbox-wrapper"><a class="lightbox" href="https://cdn3.ldstatic.com/original/4X/6/2/a/62a898a2d1178c85985ece017fc7ec2f166280c4.webp" data-download-href="/uploads/short-url/e4M0ufHM2cU20lFJerOstTHGz64.webp?dl=1" title="640 (4)"><img src="https://cdn3.ldstatic.com/optimized/4X/6/2/a/62a898a2d1178c85985ece017fc7ec2f166280c4_2_690x333.webp" alt="640 (4)" data-base62-sha1="e4M0ufHM2cU20lFJerOstTHGz64" width="690" height="333" srcset="https://cdn3.ldstatic.com/optimized/4X/6/2/a/62a898a2d1178c85985ece017fc7ec2f166280c4_2_690x333.webp, https://cdn3.ldstatic.com/optimized/4X/6/2/a/62a898a2d1178c85985ece017fc7ec2f166280c4_2_1035x499.webp 1.5x, https://cdn3.ldstatic.com/original/4X/6/2/a/62a898a2d1178c85985ece017fc7ec2f166280c4.webp 2x" data-dominant-color="F2F4F7"></a></div><p></p>
+<p>但如果你想自己DIY这个流程，我墙裂推荐一个神器：<strong>Grok</strong> 。</p>
+<p>别的不说，它是我目前用过搜索和信息总结能力最强的AI，没有之一。用法简单到发指：把上一步生成的大纲标题，一个一个丢给Grok，它就能帮你把所需资料搜集、整理得妥妥帖帖。</p>
+<p></p><div class="lightbox-wrapper"><a class="lightbox" href="https://cdn3.ldstatic.com/original/4X/6/3/0/6305c980802f3a1ddff840e44a71c842a9d9ea88.png" data-download-href="/uploads/short-url/e7ZFro7HBA4UFvQuyHKudSumBpS.png?dl=1" title="ScreenShot_2026-03-19_104103_358"><img src="https://cdn3.ldstatic.com/optimized/4X/6/3/0/6305c980802f3a1ddff840e44a71c842a9d9ea88_2_690x310.png" alt="ScreenShot_2026-03-19_104103_358" data-base62-sha1="e7ZFro7HBA4UFvQuyHKudSumBpS" width="690" height="310" srcset="https://cdn3.ldstatic.com/optimized/4X/6/3/0/6305c980802f3a1ddff840e44a71c842a9d9ea88_2_690x310.png, https://cdn3.ldstatic.com/optimized/4X/6/3/0/6305c980802f3a1ddff840e44a71c842a9d9ea88_2_1035x465.png 1.5x, https://cdn3.ldstatic.com/optimized/4X/6/3/0/6305c980802f3a1ddff840e44a71c842a9d9ea88_2_1380x620.png 2x" data-dominant-color="F0F0F0"></a></div><p></p>
+<blockquote>
+<p><strong>3.PPT居然还有策划稿？</strong></p>
+</blockquote>
+<p>拿到内容后，多数人就直接让AI上设计了。但我们多加了一个操作——<strong>策划</strong> 。</p>
+<p>啥，PPT还要做策划呢？我想这个词很多PPT设计师都没听过，五年前，我也一样。</p>
+<p>那时候我去到了一家国内顶尖的PPT设计公司，他们的PPT报价是1万+一页。</p>
+<p>他们有一个专门的岗位，叫策划师。没错，你前面看到的，需求调研、资料检索，大纲规划，这事儿都归他们干。</p>
+<p></p><div class="lightbox-wrapper"><a class="lightbox" href="https://cdn3.ldstatic.com/original/4X/6/b/f/6bffcac7dd291641b6cdfa71cce3538a58248974.webp" data-download-href="/uploads/short-url/fpp7wHCfL4yMqYduxf9s7JiuYC0.webp?dl=1" title="640 (5)"><img src="https://cdn3.ldstatic.com/optimized/4X/6/b/f/6bffcac7dd291641b6cdfa71cce3538a58248974_2_690x247.webp" alt="640 (5)" data-base62-sha1="fpp7wHCfL4yMqYduxf9s7JiuYC0" width="690" height="247" srcset="https://cdn3.ldstatic.com/optimized/4X/6/b/f/6bffcac7dd291641b6cdfa71cce3538a58248974_2_690x247.webp, https://cdn3.ldstatic.com/optimized/4X/6/b/f/6bffcac7dd291641b6cdfa71cce3538a58248974_2_1035x370.webp 1.5x, https://cdn3.ldstatic.com/original/4X/6/b/f/6bffcac7dd291641b6cdfa71cce3538a58248974.webp 2x" data-dominant-color="F2EAEA"></a></div><p></p>
+<p>他们最终会提供一个PPT草稿给到设计师，每页什么位置要放什么元素，用什么样的版式，全都固定好。</p>
+<p>就像这样：</p>
+<p></p><div class="lightbox-wrapper"><a class="lightbox" href="https://cdn3.ldstatic.com/original/4X/b/6/3/b6318bdc47fbfd9d7466fdbb944ad839d6154158.webp" data-download-href="/uploads/short-url/pZL3erp8SCZwwCp98UPRnlj9LgQ.webp?dl=1" title="640 (7)"><img src="https://cdn3.ldstatic.com/optimized/4X/b/6/3/b6318bdc47fbfd9d7466fdbb944ad839d6154158_2_690x370.webp" alt="640 (7)" data-base62-sha1="pZL3erp8SCZwwCp98UPRnlj9LgQ" width="690" height="370" srcset="https://cdn3.ldstatic.com/optimized/4X/b/6/3/b6318bdc47fbfd9d7466fdbb944ad839d6154158_2_690x370.webp, https://cdn3.ldstatic.com/optimized/4X/b/6/3/b6318bdc47fbfd9d7466fdbb944ad839d6154158_2_1035x555.webp 1.5x, https://cdn3.ldstatic.com/original/4X/b/6/3/b6318bdc47fbfd9d7466fdbb944ad839d6154158.webp 2x" data-dominant-color="F3F4F6"></a></div><p></p>
+<p>真正让AI去做PPT的时候，你也可以试试一样的处理。先让AI生成一个，不要各种复杂效果，简简单单，清清爽爽的页面初稿。</p>
+<p></p><div class="lightbox-wrapper"><a class="lightbox" href="https://cdn3.ldstatic.com/original/4X/5/1/9/519bbc1c6824983966ca86882578e0c752288d66.webp" data-download-href="/uploads/short-url/bDWkNfWbQVWsIJxXi73JY6WX5Iy.webp?dl=1" title="640 (6)"><img src="https://cdn3.ldstatic.com/optimized/4X/5/1/9/519bbc1c6824983966ca86882578e0c752288d66_2_690x487.webp" alt="640 (6)" data-base62-sha1="bDWkNfWbQVWsIJxXi73JY6WX5Iy" width="690" height="487" srcset="https://cdn3.ldstatic.com/optimized/4X/5/1/9/519bbc1c6824983966ca86882578e0c752288d66_2_690x487.webp, https://cdn3.ldstatic.com/optimized/4X/5/1/9/519bbc1c6824983966ca86882578e0c752288d66_2_1035x730.webp 1.5x, https://cdn3.ldstatic.com/original/4X/5/1/9/519bbc1c6824983966ca86882578e0c752288d66.webp 2x" data-dominant-color="F2F3F6"></a></div><p></p>
+<p>到后面再去加设计的效果：</p>
+<p></p><div class="lightbox-wrapper"><a class="lightbox" href="https://cdn3.ldstatic.com/original/4X/b/c/8/bc840a42bada631399f6d5c0504b9b11990210a7.webp" data-download-href="/uploads/short-url/qTGERfaxsr0u4cI5v17mmr1Jq1V.webp?dl=1" title="640 (8)"><img src="https://cdn3.ldstatic.com/optimized/4X/b/c/8/bc840a42bada631399f6d5c0504b9b11990210a7_2_690x487.webp" alt="640 (8)" data-base62-sha1="qTGERfaxsr0u4cI5v17mmr1Jq1V" width="690" height="487" srcset="https://cdn3.ldstatic.com/optimized/4X/b/c/8/bc840a42bada631399f6d5c0504b9b11990210a7_2_690x487.webp, https://cdn3.ldstatic.com/optimized/4X/b/c/8/bc840a42bada631399f6d5c0504b9b11990210a7_2_1035x730.webp 1.5x, https://cdn3.ldstatic.com/original/4X/b/c/8/bc840a42bada631399f6d5c0504b9b11990210a7.webp 2x" data-dominant-color="5C6470"></a></div><p></p>
+<p>我们做了大量测试，发现这套人类专家的工作流，AI完全能理解！策划部分负责版面规划，设计部分来做风格样式，跑下来的效果非常好。</p>
+<p>你啥都不用干，等AI跑完这套流程就能用，甚至都不太需要改。</p>
+<p>那当然，如果是一些特别重要的PPT，你也可以在策划稿阶段精调内容，再去让AI跑最终的设计，把效率和颜值都最大化。</p>
+<blockquote>
+<p><strong>4.用这个PPT技巧让AI跑设计。</strong></p>
+</blockquote>
+<p>我之前做PPT课程的时候，有一个可以给到“夯爆了”的PPT技巧，叫卡片式布局。</p>
+<p>啥是卡片式布局呢，喏，你在苹果的发布会上经常能看到。把内容放进了一个个卡片里。</p>
+<p></p><div class="lightbox-wrapper"><a class="lightbox" href="https://cdn3.ldstatic.com/original/4X/2/8/d/28d75c58237d2ea179ddd772da651aae0ac455ce.webp" data-download-href="/uploads/short-url/5Pivr2068Xfyzb308gmUFEu3eDs.webp?dl=1" title="640 (9)"><img src="https://cdn3.ldstatic.com/optimized/4X/2/8/d/28d75c58237d2ea179ddd772da651aae0ac455ce_2_690x387.webp" alt="640 (9)" data-base62-sha1="5Pivr2068Xfyzb308gmUFEu3eDs" width="690" height="387" srcset="https://cdn3.ldstatic.com/optimized/4X/2/8/d/28d75c58237d2ea179ddd772da651aae0ac455ce_2_690x387.webp, https://cdn3.ldstatic.com/optimized/4X/2/8/d/28d75c58237d2ea179ddd772da651aae0ac455ce_2_1035x580.webp 1.5x, https://cdn3.ldstatic.com/original/4X/2/8/d/28d75c58237d2ea179ddd772da651aae0ac455ce.webp 2x" data-dominant-color="1D1A1D"></a></div><p></p>
+<p>之前在论坛发了两篇文章，用的也是一样的卡片式布局的思路。</p>
+<aside class="quote quote-modified" data-post="1" data-topic="604327">
+  <div class="title">
+    <div class="quote-controls"></div>
+    <img alt="" width="24" height="24" src="https://cdn.ldstatic.com/user_avatar/linux.do/sandun/48/1505730_2.png" class="avatar">
+    <div class="quote-title__text-content">
+      <a href="https://linux.do/t/topic/604327">把小米379页的年报转为可视化网页，附完整提示词</a> <a class="badge-category__wrapper " href="https://linux.do/c/develop/4"><span data-category-id="4" style="--category-badge-color: #32c3c3; --category-badge-text-color: #000000;" data-drop-close="true" class="badge-category --style-icon " title="此版块包含开发、测试、调试、部署、优化、安全等方面的内容。"><svg class="fa d-icon svg-icon svg-node" aria-hidden="true"><svg id="code" viewBox="0 0 640 512">
+  <path d="M392.8 1.2c-17-4.9-34.7 5-39.6 22l-128 448c-4.9 17 5 34.7 22 39.6s34.7-5 39.6-22l128-448c4.9-17-5-34.7-22-39.6zm80.6 120.1c-12.5 12.5-12.5 32.8 0 45.3L562.7 256l-89.4 89.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l112-112c12.5-12.5 12.5-32.8 0-45.3l-112-112c-12.5-12.5-32.8-12.5-45.3 0zm-306.7 0c-12.5-12.5-32.8-12.5-45.3 0l-112 112c-12.5 12.5-12.5 32.8 0 45.3l112 112c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L77.3 256l89.4-89.4c12.5-12.5 12.5-32.8 0-45.3z"></path>
+</svg></svg>
+<span class="badge-category__name">开发调优</span></span></a>
+    </div>
+  </div>
+  <blockquote>
+    前两天，小米发布了2024年度的完整年报。 
+三顿本来想挑其中一些重要的内容，给大家做一份完整的PPT。但我打开一看，有整整379页： 
+ <a class="lightbox" href="https://cdn3.ldstatic.com/original/4X/d/2/8/d283c6cffc642bdb6b0ca7239c62d24dbf92f35c.webp" data-download-href="https://cdn3.ldstatic.com/d283c6cffc642bdb6b0ca7239c62d24dbf92f35c" title="dca97a421426b656c3911c2ebde05a16">[dca97a421426b656c3911c2ebde05a16]</a> 
+手动整理？吭哧吭哧地读、提取、再做成PPT？那估计得熬好几天，头发都得掉一把。 
+就在我感觉快要被这379页“活埋”的时候，脑子里突然闪过一个念头：这种事，能不能让AI来帮我扛？ 
+折腾研…
+  </blockquote>
+</aside>
+
+<p></p><div class="lightbox-wrapper"><a class="lightbox" href="https://cdn3.ldstatic.com/original/4X/c/7/a/c7a44935dcb61e2bc0421e6e8b2a35343a044806.webp" data-download-href="/uploads/short-url/su6ZRaPZXyPfrbqq5Q51pzxEXc2.webp?dl=1" title="640 (10)"><img src="https://cdn3.ldstatic.com/optimized/4X/c/7/a/c7a44935dcb61e2bc0421e6e8b2a35343a044806_2_690x388.webp" alt="640 (10)" data-base62-sha1="su6ZRaPZXyPfrbqq5Q51pzxEXc2" width="690" height="388" srcset="https://cdn3.ldstatic.com/optimized/4X/c/7/a/c7a44935dcb61e2bc0421e6e8b2a35343a044806_2_690x388.webp, https://cdn3.ldstatic.com/optimized/4X/c/7/a/c7a44935dcb61e2bc0421e6e8b2a35343a044806_2_1035x582.webp 1.5x, https://cdn3.ldstatic.com/original/4X/c/7/a/c7a44935dcb61e2bc0421e6e8b2a35343a044806.webp 2x" data-dominant-color="18232A"></a></div><p></p>
+<p>这样做有三大好处：</p>
+<ol>
+<li><strong>能装：</strong> 一页里能清晰地承载大量信息。</li>
+<li><strong>灵活：</strong> 卡片数量、大小、位置可以随意组合，版式变化无穷。</li>
+<li><strong>AI能懂：</strong> 这是最关键的！我们发现，“卡片”是AI最容易理解和掌握的一种设计语言。</li>
+</ol>
+<p>我们把这套方法论，写成了一段精确的指令，告诉AI如何像顶级设计师一样思考布局。这可以说是我们项目的核心壁垒之一，今天也一并分享了：</p>
+<pre><code class="lang-auto">内容页的便当网格 (Bento Grid) 布局
+这是一种灵活的网格系统，其布局应由内容本身的需求驱动，而非僵硬的模板。通过组合不同尺寸的卡片，创造出动态且视觉有趣的布局。
+- 核心原则:
+    - 灵活性: 卡片数量不固定。可以是 1, 2, 3, 4, 5 或更多个，取决于如何更好地呈现信息。
+    - 层级感: 使用卡片尺寸建立视觉层级。最重要的信息放在最大的卡片上。
+    - 留白: 在所有卡片之间保持至少 20px 的间距。
+- 布局组合示例:
+    - 单一焦点: 一张大卡片覆盖大部分区域 (w=1200, h=580)。适用于单一、有力的信息或详细的图表。
+    - 两栏布局:
+        - 50/50 对称: 两张等宽的卡片。
+        - 非对称: 一张较宽的卡片（如 2/3 宽度）用于主内容，一张较窄的（1/3 宽度）用于辅助信息、数据或图片。
+    - 三栏布局: 三张等宽的卡片，适合并列比较三项内容。
+    - 主次结合: 一张大的居中卡片，两侧各一张小的垂直卡片。
+    - 顶部英雄式: 顶部一张宽幅“英雄”卡片，下方是 2-4 个较小的等宽卡片网格。
+    - 混合网格 (自由度最高): 自由混合各种尺寸的卡片，例如一个中等方块、两个小的水平矩形和一个垂直矩形。这种方式可以极大地适应不同内容的需求。
+
+</code></pre>
+<p>如果大家自己去跑也很简单，拿你刚刚用Grok检索到的内容结果，加上我下面这段提示词：</p>
+<pre><code class="lang-auto">作为精通信息架构与 SVG 编码的专家，你的任务是将完整的文字内容转化为一张高质量、结构化、具备高级感、简洁感和专业感的 SVG 演示文稿页面。要求如下：
+
+1.画布: SVG viewBox 必须是 0 0 1280 720。
+
+2.内容页的便当网格 (Bento Grid) 布局
+这是一种灵活的网格系统，其布局应由内容本身的需求驱动，而非僵硬的模板。通过组合不同尺寸的卡片，创造出动态且视觉有趣的布局。
+- 核心原则:
+    - 灵活性: 卡片数量不固定。可以是 1, 2, 3, 4, 5 或更多个，取决于如何更好地呈现信息。
+    - 层级感: 使用卡片尺寸建立视觉层级。最重要的信息放在最大的卡片上。
+    - 留白: 在所有卡片之间保持至少 20px 的间距。
+- 布局组合示例:
+    - 单一焦点: 一张大卡片覆盖大部分区域 (w=1200, h=580)。适用于单一、有力的信息或详细的图表。
+    - 两栏布局:
+        - 50/50 对称: 两张等宽的卡片。
+        - 非对称: 一张较宽的卡片（如 2/3 宽度）用于主内容，一张较窄的（1/3 宽度）用于辅助信息、数据或图片。
+    - 三栏布局: 三张等宽的卡片，适合并列比较三项内容。
+    - 主次结合: 一张大的居中卡片，两侧各一张小的垂直卡片。
+    - 顶部英雄式: 顶部一张宽幅“英雄”卡片，下方是 2-4 个较小的等宽卡片网格。
+    - 混合网格 (自由度最高): 自由混合各种尺寸的卡片，例如一个中等方块、两个小的水平矩形和一个垂直矩形。这种方式可以极大地适应不同内容的需求。
+
+
+请你根据我的内容输出SVG代码，我的内容是：
+
+</code></pre>
+<p>直接发送Gemini处理，我们用的是3 Flash，有条件可以直接上3.1 Pro:</p>
+<p></p><div class="lightbox-wrapper"><a class="lightbox" href="https://cdn3.ldstatic.com/original/4X/c/7/4/c74bd996a229c7abf44d1ad0a6ff9d1dd37d78bc.png" data-download-href="/uploads/short-url/sr3wvMHAtq5K1vyGkVSoFT5lRZq.png?dl=1" title="ScreenShot_2026-03-19_104134_376"><img src="https://cdn3.ldstatic.com/optimized/4X/c/7/4/c74bd996a229c7abf44d1ad0a6ff9d1dd37d78bc_2_557x500.png" alt="ScreenShot_2026-03-19_104134_376" data-base62-sha1="sr3wvMHAtq5K1vyGkVSoFT5lRZq" width="557" height="500" srcset="https://cdn3.ldstatic.com/optimized/4X/c/7/4/c74bd996a229c7abf44d1ad0a6ff9d1dd37d78bc_2_557x500.png, https://cdn3.ldstatic.com/optimized/4X/c/7/4/c74bd996a229c7abf44d1ad0a6ff9d1dd37d78bc_2_835x750.png 1.5x, https://cdn3.ldstatic.com/optimized/4X/c/7/4/c74bd996a229c7abf44d1ad0a6ff9d1dd37d78bc_2_1114x1000.png 2x" data-dominant-color="F3F5F8"></a></div><p></p>
+<p>它直接就能生成这样一整个页面的SVG代码了：</p>
+<p></p><div class="lightbox-wrapper"><a class="lightbox" href="https://cdn3.ldstatic.com/original/4X/2/6/f/26f3fcb9890f2b0727180c9ef98a18cc01900137.jpeg" data-download-href="/uploads/short-url/5yASOj69le9RL99qqFPlR6709Yr.jpeg?dl=1" title="ScreenShot_2026-03-19_103904_044"><img src="https://cdn3.ldstatic.com/optimized/4X/2/6/f/26f3fcb9890f2b0727180c9ef98a18cc01900137_2_690x347.jpeg" alt="ScreenShot_2026-03-19_103904_044" data-base62-sha1="5yASOj69le9RL99qqFPlR6709Yr" width="690" height="347" srcset="https://cdn3.ldstatic.com/optimized/4X/2/6/f/26f3fcb9890f2b0727180c9ef98a18cc01900137_2_690x347.jpeg, https://cdn3.ldstatic.com/optimized/4X/2/6/f/26f3fcb9890f2b0727180c9ef98a18cc01900137_2_1035x520.jpeg 1.5x, https://cdn3.ldstatic.com/optimized/4X/2/6/f/26f3fcb9890f2b0727180c9ef98a18cc01900137_2_1380x694.jpeg 2x" data-dominant-color="494F59"></a></div><p></p>
+<p>市面上的 AIPPT 大多是调用 Banana 或者生成 html，我们采用了生成整页 SVG 的方案。</p>
+<p>SVG是一种PPT里兼容性最好的格式，生成的这个SVG代码你可以直接拖到Office 2016以上的版本里去做使用。</p>
+<p>为什么选了这种SVG格式呢？说起来也是泪。</p>
+<p>好处是可以导入 PPT，完全可编辑，甚至各种设计软件都支持，而且可以无限放大，保证清晰度。代价是，三个多月里我们花了大量时间处理 SVG，因为没人做过，一切都得从零开始，不断摸索。</p>
+<p>如果你是自己使用，也不太需要可编辑性，我更推荐让AI生成HTML格式的，这个部分的提示词在之前的文章里有，感兴趣的佬友可以看看。</p>
+<hr>
+<p>最后也想聊聊，为什么想把这个思路分享出来呢，特别是发的提示词已经是我们项目里用的。同事觉得我傻，不怕别人马上抄走吗。</p>
+<p>那第一，我觉得，我现在做的这个东西，也只是挖掘了AI做PPT，大概5%的能力，我们还有非常多棒的思路，会去一一实现，这些对于PPT的理解和积累，是没办法复制的。</p>
+<p>第二，我是真的不太服气。市面上这些AI PPT工具，他们的开发根本都不懂PPT。给个大纲，硬套模板，让很多人用完都说：AI PPT，也就这样了，不行。</p>
+<p>不该是这样的。</p>
+<p>我教了7年PPT，做了3年AI产品，我坚信，AI有能力也已经在改变我们制作和演示信息的方式。这些效果是现在我平衡成本和效果下，能跑出来的极限，但远远不是AI的极限。</p>
+<p>我会持续在这里分享我的关于AI PPT的思考和探索，希望这些内容，能对同样在路上的你，有所帮助。</p>
+            <p><small>1099 个帖子 - 1032 位参与者</small></p>
+            <p><a href="https://linux.do/t/topic/1782304">阅读完整话题</a></p>
+          ]]></description>
+          <link>https://linux.do/t/topic/1782304</link>
+          <pubDate>Thu, 19 Mar 2026 05:59:00 +0000</pubDate>
+          <discourse:topicPinned>No</discourse:topicPinned>
+          <discourse:topicClosed>No</discourse:topicClosed>
+          <discourse:topicArchived>No</discourse:topicArchived>
+          <guid isPermaLink="false">linux.do-topic-1782304</guid>
+          <source url="https://linux.do/t/topic/1782304.rss">应该是目前最强的PPT Agent，附上完整思路分享</source>
+        </item>
+        <item>
+          <title>有心之人开始带节奏？</title>
+          <dc:creator><![CDATA[Neo]]></dc:creator>
+          <category>公告</category>
+          <description><![CDATA[
+            <p>最近有些别有用心的账号，隔三差五跳出来鼓吹新老差异，刻意挑动新老矛盾。</p>
+<p>闻道有先后，加入社区，遵守准则，就是佬友，没有新老之分。再有此类言论，无需核实，直接封禁账号。</p>
+<p>特此公告！</p>
+            <p><small>1 个帖子 - 1 位参与者</small></p>
+            <p><a href="https://linux.do/t/topic/2385713">阅读完整话题</a></p>
+          ]]></description>
+          <link>https://linux.do/t/topic/2385713</link>
+          <pubDate>Fri, 12 Jun 2026 07:23:25 +0000</pubDate>
+          <discourse:topicPinned>No</discourse:topicPinned>
+          <discourse:topicClosed>No</discourse:topicClosed>
+          <discourse:topicArchived>No</discourse:topicArchived>
+          <guid isPermaLink="false">linux.do-topic-2385713</guid>
+          <source url="https://linux.do/t/topic/2385713.rss">有心之人开始带节奏？</source>
+        </item>
+        <item>
+          <title>正告一些上车关门的佬友</title>
+          <dc:creator><![CDATA[Neo]]></dc:creator>
+          <category>公告</category>
+          <description><![CDATA[
+            <p>最近我发现一个现象，有佬友出来发一些羊毛和技术思路，就有人跳出来指指点点，甚至围攻试图阻止佬友发帖。就给人一种什么样的感觉？羊毛到他为止。</p>
+<p>我们要说的是，只要佬友发帖没有违反社区规则，你跳出来<strong>阻止佬友发帖</strong>就是在捣乱，是违规的。</p>
+<p>社区除了节点强制要求权限之外，权限都按照发帖人自己的需求自行设定。我们禁止搬运权限帖，也是在尊重发帖人的意愿。这跟捂信息是两码事，有本质区别。</p>
+<p>全网能发布信息的地方远不止L站，这也是互联网的魅力之一，不要妄图信息到你为止。</p>
+<hr>
+<p>激情扩容还在继续，上来简短说一下。</p>
+            <p><small>1 个帖子 - 1 位参与者</small></p>
+            <p><a href="https://linux.do/t/topic/1725613">阅读完整话题</a></p>
+          ]]></description>
+          <link>https://linux.do/t/topic/1725613</link>
+          <pubDate>Wed, 11 Mar 2026 09:55:59 +0000</pubDate>
+          <discourse:topicPinned>No</discourse:topicPinned>
+          <discourse:topicClosed>No</discourse:topicClosed>
+          <discourse:topicArchived>No</discourse:topicArchived>
+          <guid isPermaLink="false">linux.do-topic-1725613</guid>
+          <source url="https://linux.do/t/topic/1725613.rss">正告一些上车关门的佬友</source>
+        </item>
+  </channel>
+</rss>
