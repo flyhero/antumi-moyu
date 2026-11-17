@@ -81,8 +81,16 @@ function likesOf(raw: RawPost): number {
   return raw.actions_summary?.find((action) => action.id === 2)?.count ?? 0
 }
 
+// linux.do serves its avatars and emoji with Cross-Origin-Resource-Policy: same-origin, so a page
+// that is not linux.do cannot show them. Its CDN serves the same paths to anyone.
+const SAME_ORIGIN_ASSETS = /https:\/\/linux\.do\/(?=(?:user_avatar|letter_avatar|images\/emoji)\/)/g
+function fromCdn(text: string): string {
+  return text.replace(SAME_ORIGIN_ASSETS, 'https://cdn.ldstatic.com/')
+}
+
 function avatarOf(raw: RawPost): string | null {
-  return absoluteUrl(raw.avatar_template?.replace('{size}', '96'), ORIGIN)
+  const avatar = absoluteUrl(raw.avatar_template?.replace('{size}', '96'), ORIGIN)
+  return avatar ? fromCdn(avatar) : null
 }
 
 // A normal, visible post; small actions ("closed", "pinned") and removed ones are not for reading.
@@ -95,7 +103,7 @@ function toPost(raw: RawPost): Post {
     floor: raw.post_number,
     author: raw.username || raw.name || '',
     avatar: avatarOf(raw),
-    html: absoluteLinks(raw.cooked ?? '', ORIGIN),
+    html: fromCdn(absoluteLinks(raw.cooked ?? '', ORIGIN)),
     time: millis(raw.created_at),
     replyTo: raw.reply_to_post_number ?? null,
     likes: likesOf(raw)

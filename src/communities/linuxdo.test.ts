@@ -95,13 +95,13 @@ describe('linuxdo thread', () => {
     expect(thread.more).toBe(false)
     expect(thread.posts).toEqual([])
     expect(thread.opening).toMatchObject({ floor: 1, author: 'inm', replyTo: null, likes: 0, time: Date.parse('2026-11-17T13:12:34.566Z') })
-    expect(thread.opening?.avatar).toBe('https://linux.do/user_avatar/linux.do/inm/96/2487393_2.png')
+    expect(thread.opening?.avatar).toBe('https://cdn.ldstatic.com/user_avatar/linux.do/inm/96/2487393_2.png')
     expect(thread.topic).toEqual({
       community: 'linuxdo',
       id: '3192714',
       title: '开了个Google Ultra 20x，有什么隐藏权益可以领以及正常用argon周限有多少刀',
       author: 'inm',
-      avatar: 'https://linux.do/user_avatar/linux.do/inm/96/2487393_2.png',
+      avatar: 'https://cdn.ldstatic.com/user_avatar/linux.do/inm/96/2487393_2.png',
       channel: null,
       replies: 0,
       time: Date.parse('2026-11-17T13:12:34.566Z'),
@@ -116,7 +116,10 @@ describe('linuxdo thread', () => {
     expect(thread.opening).toBeNull()
     expect(thread.posts).toHaveLength(20)
     expect(thread.posts[0]).toMatchObject({ floor: 22, author: 'prya', likes: 2, replyTo: null })
-    expect(thread.posts[0]?.avatar).toBe('https://linux.do/letter_avatar/prya/96/6_449c533f586939b6e5f246632a46421f.png')
+    expect(thread.posts[0]?.avatar).toBe('https://cdn.ldstatic.com/letter_avatar/prya/96/6_449c533f586939b6e5f246632a46421f.png')
+    // Emoji in the post come from the CDN too, and links into the forum stay on linux.do.
+    expect(thread.posts.some((post) => post.html.includes('https://cdn.ldstatic.com/images/emoji/'))).toBe(true)
+    expect(thread.posts.every((post) => !post.html.includes('https://linux.do/images/emoji/'))).toBe(true)
     expect(thread.posts.map((p) => p.floor)).toEqual([...thread.posts.map((p) => p.floor)].sort((a, b) => a - b))
     // 58 posts in the stream, 40 seen so far.
     expect(thread.more).toBe(true)
