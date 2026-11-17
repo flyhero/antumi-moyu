@@ -7,6 +7,7 @@ An Antumi plugin with one page: forum threads from linux.do and V2EX, drawn to l
 - A community is one file in `src/communities/`. Anonymous and read-only: no login, no posting.
 - Forum HTML is untrusted: the page sanitizes it before showing it, and links open through the host.
 - Ask the forums for little: one request per thing the user does, no background refresh, no retry loops. Say plainly when a forum refuses.
+- Requests follow the user's proxy (`src/proxy.ts`: the environment first, then the system's setting, by the same rules as Antumi core), through a CONNECT tunnel (`src/tunnel.ts`).
 - Requests go out over HTTP/2 (`src/http.ts`), never `fetch`: linux.do's Cloudflare challenges HTTP/1.1 clients. linux.do's avatars and emoji are handed out from its CDN, since its own host refuses to show them in another page.
 - The preview's data (`page/src/mock-data.ts`) is made up: no real names or avatars under invented posts.
 - Pass the AbortSignal through every request. stdout belongs to the SDK; logs go to stderr.

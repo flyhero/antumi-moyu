@@ -1,12 +1,16 @@
 import { connect } from 'node:http2'
 import type { ClientHttp2Session, IncomingHttpHeaders } from 'node:http2'
+import type { Socket } from 'node:net'
+import { proxyFor } from './proxy.js'
+import { secured, tunnel } from './tunnel.js'
 import pkg from '../package.json' with { type: 'json' }
 
 // linux.do's Cloudflare answers HTTP/1.1 clients (fetch, node:https) with a challenge but lets HTTP/2
-// through, so every request goes out over node:http2.
+// through, so every request goes out over node:http2, direct or through the user's proxy.
 
 export type HttpResponse = { status: number; headers: Record<string, string>; body: string }
-export type GetOptions = { timeoutMs?: number; maxBytes?: number }
+// proxy: the proxy to go through, or null for none; left out, the user's own setting decides.
+export type GetOptions = { timeoutMs?: number; maxBytes?: number; proxy?: string | null }
 export type Get = (url: string, signal: AbortSignal, options?: GetOptions) => Promise<HttpResponse>
 
 const TIMEOUT_MS = 15_000
@@ -35,14 +39,33 @@ function plainHeaders(headers: IncomingHttpHeaders): Record<string, string> {
   return out
 }
 
-export const get: Get = (url, signal, options = {}) =>
-  new Promise<HttpResponse>((resolve, reject) => {
-    const target = parseTarget(url)
+// The connection a request rides on when it goes through a proxy: a tunnel to the host, with TLS
+// on it unless the host is the local test server.
+async function throughProxy(proxy: string, target: URL, signal: AbortSignal): Promise<Socket> {
+  const secure = target.protocol === 'https:'
+  const socket = await tunnel(new URL(proxy), target.hostname, Number(target.port || (secure ? 443 : 80)), signal)
+  return secure ? secured(socket, target.hostname, signal) : socket
+}
+
+export const get: Get = async (url, signal, options = {}) => {
+  const target = parseTarget(url)
+  const stop = AbortSignal.any([signal, AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_MS)])
+  // Told apart by who aborted: the caller's signal means they gave up, anything else is our timer.
+  const abortError = () => new Error(signal.aborted ? '已取消' : '超时')
+  if (stop.aborted) throw abortError()
+  const proxy = options.proxy === undefined ? await proxyFor(target) : options.proxy
+  let carrier: Socket | undefined
+  if (proxy) {
+    try {
+      carrier = await throughProxy(proxy, target, stop)
+    } catch (error) {
+      throw stop.aborted ? abortError() : error
+    }
+  }
+  return new Promise<HttpResponse>((resolve, reject) => {
     const maxBytes = options.maxBytes ?? MAX_BYTES
-    const stop = AbortSignal.any([signal, AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_MS)])
-    // Told apart by who aborted: the caller's signal means they gave up, anything else is our timer.
-    const abortError = () => new Error(signal.aborted ? '已取消' : '超时')
     if (stop.aborted) {
+      carrier?.destroy()
       reject(abortError())
       return
     }
@@ -61,7 +84,8 @@ export const get: Get = (url, signal, options = {}) =>
     }
     stop.addEventListener('abort', onAbort)
 
-    session = connect(target.origin)
+    const through = carrier
+    session = through ? connect(target.origin, { createConnection: () => through }) : connect(target.origin)
     session.on('error', () => end(new Error('网络错误')))
     const stream = session.request({ ':method': 'GET', ':path': target.pathname + target.search, 'user-agent': USER_AGENT, accept: '*/*' }, { endStream: true })
 
@@ -84,3 +108,4 @@ export const get: Get = (url, signal, options = {}) =>
     // A stream closed before its end (reset, GOAWAY) is a broken response.
     stream.on('close', () => end(new Error('网络错误')))
   })
+}

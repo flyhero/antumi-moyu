@@ -1,5 +1,7 @@
 import { createServer } from 'node:http2'
 import type { Http2Server, Http2ServerRequest, Http2ServerResponse, ServerHttp2Session } from 'node:http2'
+import { createServer as createTcpServer, connect as connectTcp } from 'node:net'
+import type { Server, Socket } from 'node:net'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { get } from './http.js'
 
@@ -115,3 +117,94 @@ describe('get', () => {
     await expect.poll(() => sessions.size).toBe(0)
   })
 })
+
+// An HTTP proxy that answers CONNECT: it tunnels to the host asked for, or refuses as it is told to.
+describe('get through a proxy', () => {
+  let proxy: Server
+  let address = ''
+  let refuse: string | null = null
+  const asked: string[] = []
+  const open = new Set<Socket>()
+
+  beforeAll(async () => {
+    proxy = createTcpServer((client) => {
+      open.add(client)
+      client.on('close', () => open.delete(client))
+      client.on('error', () => {})
+      let head = ''
+      const onData = (chunk: Buffer) => {
+        head += chunk.toString('latin1')
+        if (!head.includes('\r\n\r\n')) return
+        client.off('data', onData)
+        asked.push(head)
+        const [, host, port] = /^CONNECT ([^:\s]+):(\d+) HTTP\/1\.1/.exec(head) ?? []
+        if (refuse !== null || !host || !port) { client.end(refuse ?? 'HTTP/1.1 400 Bad Request\r\n\r\n'); return }
+        const upstream = connectTcp({ host, port: Number(port) }, () => {
+          client.write('HTTP/1.1 200 Connection Established\r\n\r\n')
+          client.pipe(upstream)
+          upstream.pipe(client)
+        })
+        open.add(upstream)
+        upstream.on('close', () => { open.delete(upstream); client.destroy() })
+        upstream.on('error', () => client.destroy())
+        client.on('close', () => upstream.destroy())
+      }
+      client.on('data', onData)
+    })
+    await new Promise<void>((resolve) => proxy.listen(0, '127.0.0.1', resolve))
+    const bound = proxy.address()
+    if (!bound || typeof bound === 'string') throw new Error('no port')
+    address = `127.0.0.1:${bound.port}`
+  })
+
+  afterAll(async () => {
+    for (const socket of open) socket.destroy()
+    await new Promise<void>((resolve) => proxy.close(() => resolve()))
+  })
+
+  it('asks the proxy for a tunnel and speaks HTTP/2 through it', async () => {
+    asked.length = 0
+    refuse = null
+    const response = await get(`${base}/ok`, never, { proxy: `http://${address}` })
+    expect(response.status).toBe(200)
+    expect(response.headers['x-seen']).toBe('yes')
+    expect(asked).toHaveLength(1)
+    expect(asked[0]).toMatch(new RegExp(`^CONNECT ${base.replace('http://', '')} HTTP/1\\.1\\r\\nHost: ${base.replace('http://', '')}\\r\\n\\r\\n$`))
+  })
+
+  it('signs in to a proxy that names a user', async () => {
+    asked.length = 0
+    refuse = null
+    await get(`${base}/ok`, never, { proxy: `http://me:p%40ss@${address}` })
+    expect(asked[0]).toContain(`Proxy-Authorization: Basic ${Buffer.from('me:p@ss').toString('base64')}\r\n`)
+  })
+
+  it('goes direct when told there is no proxy', async () => {
+    asked.length = 0
+    expect((await get(`${base}/ok`, never, { proxy: null })).status).toBe(200)
+    expect(asked).toHaveLength(0)
+  })
+
+  it('says what the proxy refused', async () => {
+    refuse = 'HTTP/1.1 407 Proxy Authentication Required\r\n\r\n'
+    await expect(get(`${base}/ok`, never, { proxy: `http://${address}` })).rejects.toThrow('代理需要登录')
+    refuse = 'HTTP/1.1 403 Forbidden\r\n\r\n'
+    await expect(get(`${base}/ok`, never, { proxy: `http://${address}` })).rejects.toThrow('代理拒绝了连接（403）')
+    refuse = ''
+    await expect(get(`${base}/ok`, never, { proxy: `http://${address}` })).rejects.toThrow('代理断开了连接')
+    refuse = null
+  })
+
+  it('reports a proxy that is not there, and gives up at the timeout', async () => {
+    await expect(get(`${base}/ok`, never, { proxy: 'http://127.0.0.1:1' })).rejects.toThrow('连不上代理')
+    await expect(get(`${base}/never`, never, { proxy: `http://${address}`, timeoutMs: 150 })).rejects.toThrow('超时')
+  })
+
+  it('leaves nothing open behind it', async () => {
+    refuse = null
+    await get(`${base}/ok`, never, { proxy: `http://${address}` })
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect(open.size).toBe(0)
+  })
+})
+
