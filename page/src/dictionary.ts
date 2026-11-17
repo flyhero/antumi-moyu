@@ -37,16 +37,15 @@ const zh = {
   noTopic: '先在左边选一个话题。',
   floorMissing: (floor: number) => `第 ${floor} 楼不在已加载的内容里，可以用 n 往后翻。`,
   commandsTitle: ['命令', '作用'],
-  commands: [
-    ['n', '下一页'],
-    ['r', '刷新列表和当前话题'],
-    ['o', '在浏览器打开当前话题'],
-    ['q', '离开（也可连按两次 Esc）'],
-    ['/linuxdo  /v2ex', '切换社区'],
-    ['/latest  /hot  /python …', '切换频道（频道 id 或名字）'],
-    ['12', '跳到第 12 楼'],
-    ['j / k', '下一个 / 上一个话题（不在输入框里时）']
-  ],
+  // communities and channels: what there is to switch to here, as the commands to type; no
+  // communities when this plugin reads one forum alone.
+  commands: (communities: string, channels: string): Array<[string, string]> => {
+    const rows: Array<[string, string]> = [['n', '下一页'], ['r', '刷新列表和当前话题'], ['o', '在浏览器打开当前话题'], ['q', '离开（也可连按两次 Esc）']]
+    if (communities) rows.push([communities, '切换社区'])
+    if (channels) rows.push([channels, '切换频道（频道 id 或名字）'])
+    rows.push(['12', '跳到第 12 楼'], ['j / k', '下一个 / 上一个话题（不在输入框里时）'])
+    return rows
+  },
   greeting: '有什么可以帮你的？'
 }
 
@@ -88,16 +87,13 @@ const en: Words = {
   noTopic: 'Pick a topic on the left first.',
   floorMissing: (floor) => `Floor ${floor} is not loaded; n loads the next page.`,
   commandsTitle: ['Command', 'What it does'],
-  commands: [
-    ['n', 'Next page'],
-    ['r', 'Refresh the list and this topic'],
-    ['o', 'Open this topic in the browser'],
-    ['q', 'Leave (or press Esc twice)'],
-    ['/linuxdo  /v2ex', 'Switch community'],
-    ['/latest  /hot  /python …', 'Switch channel, by id or name'],
-    ['12', 'Jump to floor 12'],
-    ['j / k', 'Next / previous topic, outside the input']
-  ],
+  commands: (communities, channels) => {
+    const rows: Array<[string, string]> = [['n', 'Next page'], ['r', 'Refresh the list and this topic'], ['o', 'Open this topic in the browser'], ['q', 'Leave (or press Esc twice)']]
+    if (communities) rows.push([communities, 'Switch community'])
+    if (channels) rows.push([channels, 'Switch channel, by id or name'])
+    rows.push(['12', 'Jump to floor 12'], ['j / k', 'Next / previous topic, outside the input'])
+    return rows
+  },
   greeting: 'What can I help you with?'
 }
 

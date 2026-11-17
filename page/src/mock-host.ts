@@ -11,6 +11,7 @@ import { isCommunityId } from './saved-state'
 //   ?error=list|thread|communities|all   those calls fail, every time
 //   ?error=once            each method fails on its first call only, to try retrying
 //   ?state={...}           what the page kept last time, as JSON
+//   ?only=v2ex             one forum alone, as either plugin has it
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -23,7 +24,11 @@ const FAILURES: Record<string, string> = {
 }
 
 function answer(method: string, params: unknown, now: number): unknown {
-  if (method === 'communities') return mockCommunities
+  if (method === 'communities') {
+    const only = new URLSearchParams(location.search).get('only')
+    const some = mockCommunities.filter((one) => one.id === only)
+    return some.length > 0 ? some : mockCommunities
+  }
   if (!isRecord(params) || !isCommunityId(params.community)) throw new Error(`bad params for ${method}`)
   if (method === 'list' && typeof params.channel === 'string') return mockList(params.community, params.channel, now)
   if (method === 'thread' && typeof params.id === 'string') {

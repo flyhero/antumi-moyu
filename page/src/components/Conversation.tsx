@@ -12,11 +12,13 @@ import { WorkingLine } from './WorkingLine'
 export type Notice = { kind: 'help'; intro: string } | { kind: 'text'; text: string }
 
 // The thread as a conversation: the opening post as the user's message, each reply as a turn.
-export function Conversation({ thread, notice, failure, words, locale, now, showImages, shown, onTyped, onRetry, onLoadMore, onJump }: {
+export function Conversation({ thread, notice, failure, commands, words, locale, now, showImages, shown, onTyped, onRetry, onLoadMore, onJump }: {
   thread: ThreadState | null
   notice: Notice | null
   // What failed outside the thread (the communities, the list).
   failure: string | null
+  // The command list as it stands here: what there is to switch to.
+  commands: Array<[string, string]>
   words: Words
   locale: PageHost['locale']
   now: number
@@ -44,7 +46,7 @@ export function Conversation({ thread, notice, failure, words, locale, now, show
 
   return (
     <div className="chat-list">
-      {!thread && <AssistantNotice intro={words.help} words={words} />}
+      {!thread && <AssistantNotice intro={words.help} commands={commands} words={words} />}
       {pages.map((page, pageIndex) => {
         const posts = pageIndex === 0 && shown !== null ? page.posts.slice(0, shown) : page.posts
         return (
@@ -77,7 +79,7 @@ export function Conversation({ thread, notice, failure, words, locale, now, show
       )}
       {notice && (
         <div ref={said} className="chat-said">
-          {notice.kind === 'help' ? <AssistantNotice intro={notice.intro} words={words} /> : <ChatNotice text={notice.text} words={words} />}
+          {notice.kind === 'help' ? <AssistantNotice intro={notice.intro} commands={commands} words={words} /> : <ChatNotice text={notice.text} words={words} />}
         </div>
       )}
     </div>

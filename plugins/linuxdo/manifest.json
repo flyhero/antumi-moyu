@@ -1,10 +1,10 @@
 {
-  "id": "antumi.moyu",
+  "id": "antumi.moyu-linuxdo",
   "version": "0.1.0",
   "engines": { "antumi": ">=0.21.8-beta.1 <1.0.0" },
   "contributes": {
     "pages": [
-      { "id": "reader", "label": "阅读", "translations": { "en": { "label": "Reader" } }, "entry": "page/index.html" }
+      { "id": "reader", "label": "阅读 L", "translations": { "en": { "label": "Reader L" } }, "entry": "page/index.html" }
     ]
   },
   "entry": { "runtime": "node", "main": "main.mjs" },

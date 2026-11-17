@@ -1,6 +1,6 @@
 # antumi-moyu
 
-一个 [Antumi](https://github.com/flyhero/antumi) 插件：在 Antumi 里看 linux.do 和 V2EX 的帖子，界面和 AI 聊天页一样。
+两个 [Antumi](https://github.com/flyhero/antumi) 插件：在 Antumi 里看 linux.do 或 V2EX 的帖子，界面和 AI 聊天页一样。两个社区各是一个插件，只装自己要的那个，也可以都装。
 
 - 话题列表是「会话」，楼主的帖子是你发的消息，每一楼回复是助手的回答。
 - 配色、字体跟着 Antumi 当前的主题走。
@@ -8,14 +8,17 @@
 
 ## 安装
 
-需要支持插件页面的 Antumi（`manifest.json` 的 `engines.antumi` 写着最低版本）。更早的版本安装时会报清单格式错误。
+需要支持插件页面的 Antumi（插件 `manifest.json` 的 `engines.antumi` 写着最低版本）。更早的版本安装时会报清单格式错误。
+
+| 社区 | 附件名 | 侧栏入口 |
+|---|---|---|
+| linux.do | `antumi-moyu-linuxdo.zip` | 阅读 L |
+| V2EX | `antumi-moyu-v2ex.zip` | 阅读 V |
 
 在 Antumi 里打开「设置 → 插件 → 从其他位置安装」：
 
-- **GitHub Release**：填 `flyhero/antumi-moyu`。以后在同一页点「检查并更新」就能升级。
-- **本地文件**：从 [Releases](https://github.com/flyhero/antumi-moyu/releases) 下载 ZIP 后选择它。这样装的不会自动找到新版本。
-
-装好后侧栏多一个「阅读」入口。
+- **GitHub Release**：仓库填 `flyhero/antumi-moyu`，「ZIP 附件名」填上表里的名字。两个都要就装两次。以后在同一页点「检查并更新」就能升级。
+- **本地文件**：从 [Releases](https://github.com/flyhero/antumi-moyu/releases) 下载对应的 ZIP 后选择它。这样装的不会自动找到新版本。
 
 ## 用法
 
@@ -27,7 +30,6 @@
 | `r` | 刷新列表和当前帖子 |
 | `o` | 在内置浏览器打开当前帖子 |
 | `q` | 离开，回到会话（连按两次 Esc 也可以） |
-| `/linuxdo`、`/v2ex` | 切换社区 |
 | `/latest`、`/hot`、`/python` … | 切换板块，用板块的 id 或名字 |
 | 数字 | 跳到那一楼 |
 | `?` | 列出全部命令 |
@@ -45,10 +47,10 @@
 
 ```sh
 npm ci
-npm run check     # 类型检查、测试、构建 dist/antumi-moyu-<版本>.zip
-npm run preview   # http://127.0.0.1:4173 ，用假数据在浏览器里看页面
+npm run check     # 类型检查、测试、构建 dist/antumi-moyu-linuxdo.zip 和 dist/antumi-moyu-v2ex.zip
+npm run preview   # http://127.0.0.1:4173 ，用假数据在浏览器里看页面；加 ?only=v2ex 看单个社区的样子
 ```
 
-`src/` 是后台，`page/` 是页面，约定见 [AGENTS.md](AGENTS.md)。接口和限制见 Antumi 的 [插件文档](https://github.com/flyhero/antumi/blob/main/docs/PLUGINS.md)。
+`src/` 是两个插件共用的后台，`page/` 是共用的页面，`plugins/<社区>/` 是每个插件自己的清单和入口，约定见 [AGENTS.md](AGENTS.md)。接口和限制见 Antumi 的 [插件文档](https://github.com/flyhero/antumi/blob/main/docs/PLUGINS.md)。
 
-发布：`package.json` 和 `manifest.json` 改成同一个版本号，推送标签 `v<版本号>`，Release 工作流会构建并附上 ZIP。
+发布：`package.json` 和两个 `plugins/*/manifest.json` 改成同一个版本号，推送标签 `v<版本号>`，Release 工作流会构建并把两个 ZIP 附在同一个 Release 上。ZIP 的名字不带版本号，Antumi 靠这个名字在最新的 Release 里找到更新。

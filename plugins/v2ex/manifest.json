@@ -1,0 +1,12 @@
+{
+  "id": "antumi.moyu-v2ex",
+  "version": "0.1.0",
+  "engines": { "antumi": ">=0.21.8-beta.1 <1.0.0" },
+  "contributes": {
+    "pages": [
+      { "id": "reader", "label": "阅读 V", "translations": { "en": { "label": "Reader V" } }, "entry": "page/index.html" }
+    ]
+  },
+  "entry": { "runtime": "node", "main": "main.mjs" },
+  "env": ["HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY", "NO_PROXY"]
+}

@@ -122,6 +122,11 @@ export function App({ host }: { host: PageHost }) {
         setNotice({ kind: 'help', intro: words.unknown(command.text) })
         return
       case 'community':
+        // A forum this plugin does not read is a word it does not know.
+        if (!reader.communities?.some((one) => one.id === command.community)) {
+          setNotice({ kind: 'help', intro: words.unknown(`/${command.community}`) })
+          return
+        }
         stream.finish()
         reader.selectCommunity(command.community)
         return
@@ -177,6 +182,9 @@ export function App({ host }: { host: PageHost }) {
     }
   }, [])
   const failure = reader.communitiesError ?? reader.list.error
+  const others = reader.communities && reader.communities.length > 1 ? reader.communities.map((one) => `/${one.id}`).join('  ') : ''
+  const channels = reader.community?.channels ?? []
+  const commands = words.commands(others, `${channels.slice(0, 3).map((one) => `/${one.id}`).join('  ')}${channels.length > 3 ? ' …' : ''}`)
   const topic = thread?.topic ?? null
   const busy = (thread?.loading ?? null) !== null || streaming
 
@@ -203,6 +211,7 @@ export function App({ host }: { host: PageHost }) {
           thread={thread}
           notice={notice}
           failure={failure}
+          commands={commands}
           words={words}
           locale={host.locale}
           now={now}

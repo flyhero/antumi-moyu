@@ -1,10 +1,8 @@
 import { z } from 'zod'
 import { CommunityInfo, ListParams, Thread, ThreadParams, Topic } from './community.js'
 import type { Community } from './community.js'
-import { linuxdo } from './communities/linuxdo.js'
-import { v2ex } from './communities/v2ex.js'
 
-// What the page may call. Every answer is parsed against the contract here, so a forum's surprise
+// What the page may call, for the forums a plugin reads: each plugin (plugins/*) names its own. Every answer is parsed against the contract here, so a forum's surprise
 // becomes an Error the page can show instead of a shape it cannot draw.
 
 export type CallContext = { signal: AbortSignal }
@@ -50,5 +48,3 @@ export function makeReader(all: Community[]) {
     }
   }
 }
-
-export const reader = makeReader([linuxdo(), v2ex()])

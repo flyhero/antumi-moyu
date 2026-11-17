@@ -43,7 +43,8 @@ export function useReader(host: PageHost, onOpened: (thread: Thread) => void) {
     host.setState(saved)
   }, [host, saved])
 
-  const community = communities?.find((one) => one.id === saved.community) ?? null
+  // The forum last read, or the first there is: a plugin may read one alone.
+  const community = communities?.find((one) => one.id === saved.community) ?? communities?.[0] ?? null
   const channel = community ? (community.channels.find((one) => one.id === saved.channel) ?? community.channels[0] ?? null) : null
 
   const loadCommunities = useCallback(() => {

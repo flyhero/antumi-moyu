@@ -18,7 +18,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
-      - name: Publish the plugin ZIP
+      - name: Publish the plugins' ZIPs
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}

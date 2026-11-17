@@ -1,4 +1,4 @@
-// The page in a plain browser, against the mock host: builds it, then serves dist/plugin/page on
+// The page in a plain browser, against the mock host: builds it, then serves dist/page on
 // http://127.0.0.1:4173. Each load of the page rebuilds it first, so a reload shows the latest code.
 // It is served as Antumi frames it, under the same CSP and as a sandbox with an opaque origin, so
 // what breaks there (a fetch, localStorage, an inline script) breaks here too.
@@ -8,7 +8,7 @@ import { createServer } from 'node:http'
 import path from 'node:path'
 
 const root = path.resolve(import.meta.dirname, '..')
-const served = path.join(root, 'dist', 'plugin', 'page')
+const served = path.join(root, 'dist', 'page')
 const port = Number(process.env.PORT ?? 4173)
 const origin = `http://127.0.0.1:${port}`
 

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { CommunityInfo, Topic } from './community.js'
 import type { Community } from './community.js'
-import { makeReader, reader } from './reader.js'
+import { linuxdo } from './communities/linuxdo.js'
+import { v2ex } from './communities/v2ex.js'
+import { makeReader } from './reader.js'
 
 const context = { signal: new AbortController().signal }
 const topic = (id: number): Topic => ({ community: 'v2ex', id: String(id), title: `t${id}`, author: 'a', avatar: null, channel: null, replies: 0, time: null, url: 'https://www.v2ex.com/t/1' })
@@ -16,11 +18,19 @@ function fake(overrides: Partial<Community> = {}): Community {
 }
 
 describe('reader', () => {
-  it('lists both communities with their channels', async () => {
-    const infos = await reader.communities(undefined, context)
-    const parsed = CommunityInfo.array().parse(infos)
-    expect(parsed.map((community) => community.id)).toEqual(['linuxdo', 'v2ex'])
-    expect(parsed.every((community) => community.channels.length > 0)).toBe(true)
+  it('lists the forums it was given, one alone or both, with their channels', async () => {
+    const ids = async (reader: ReturnType<typeof makeReader>) => {
+      const parsed = CommunityInfo.array().parse(await reader.communities(undefined, context))
+      expect(parsed.every((community) => community.channels.length > 0)).toBe(true)
+      return parsed.map((community) => community.id)
+    }
+    expect(await ids(makeReader([linuxdo()]))).toEqual(['linuxdo'])
+    expect(await ids(makeReader([v2ex()]))).toEqual(['v2ex'])
+    expect(await ids(makeReader([linuxdo(), v2ex()]))).toEqual(['linuxdo', 'v2ex'])
+  })
+
+  it('does not know a forum it was not given', async () => {
+    await expect(makeReader([v2ex()]).list({ community: 'linuxdo', channel: 'latest' }, context)).rejects.toThrow('没有这个社区')
   })
 
   it('passes a list through and caps it at 100 topics', async () => {

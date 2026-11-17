@@ -27,11 +27,14 @@ export function TopicList({ communities, community, channel, list, openTopic, re
   return (
     <aside className="sidebar">
       <div className="sidebar-head">
-        <div className="segmented" role="radiogroup">
-          {(communities ?? []).map((one) => (
-            <button key={one.id} type="button" role="radio" aria-checked={one.id === community?.id} onClick={() => onCommunity(one.id)}>{one.name}</button>
-          ))}
-        </div>
+        {/* One forum alone has nothing to switch to. */}
+        {communities && communities.length > 1 && (
+          <div className="segmented" role="radiogroup">
+            {communities.map((one) => (
+              <button key={one.id} type="button" role="radio" aria-checked={one.id === community?.id} onClick={() => onCommunity(one.id)}>{one.name}</button>
+            ))}
+          </div>
+        )}
         <div className="sidebar-section">
           <span className="sidebar-section-label">{words.conversations}</span>
           {list.topics && <span className="count">{topics.length}</span>}

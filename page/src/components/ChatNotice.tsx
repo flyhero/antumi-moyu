@@ -14,7 +14,7 @@ export function ChatNotice({ text, words, onRetry }: { text: string; words: Word
 }
 
 // The command list, said by the assistant as a reply of its own.
-export function AssistantNotice({ intro, words }: { intro: string; words: Words }) {
+export function AssistantNotice({ intro, commands, words }: { intro: string; commands: Array<[string, string]>; words: Words }) {
   return (
     <div className="chat-entry" data-notice="">
       <div className="chat-turn-head">
@@ -27,7 +27,7 @@ export function AssistantNotice({ intro, words }: { intro: string; words: Words 
           <table>
             <thead><tr>{words.commandsTitle.map((title) => <th key={title}>{title}</th>)}</tr></thead>
             <tbody>
-              {words.commands.map(([command, meaning]) => (
+              {commands.map(([command, meaning]) => (
                 <tr key={command}><td><code>{command}</code></td><td>{meaning}</td></tr>
               ))}
             </tbody>
