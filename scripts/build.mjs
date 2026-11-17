@@ -4,7 +4,7 @@ import { build } from 'esbuild'
 import { zipSync } from 'fflate'
 
 const root = path.resolve(import.meta.dirname, '..')
-// --page builds the page alone, for the preview: it needs neither the SDK nor the backend.
+// --page builds the page alone with a mock in Antumi's place, for the preview.
 const pageOnly = process.argv.includes('--page')
 const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'))
 const manifest = JSON.parse(await readFile(path.join(root, 'manifest.json'), 'utf8'))
@@ -18,7 +18,7 @@ await mkdir(path.join(artifact, 'page'), { recursive: true })
 // The frame loads classic scripts only: a module script is fetched with CORS, which the frame's
 // opaque origin fails. The stylesheet the script imports comes out beside it as app.css.
 await build({
-  entryPoints: [path.join(root, 'page/src/main.tsx')], outfile: path.join(artifact, 'page/app.js'),
+  entryPoints: [path.join(root, pageOnly ? 'page/src/preview.tsx' : 'page/src/main.tsx')], outfile: path.join(artifact, 'page/app.js'),
   bundle: true, platform: 'browser', format: 'iife', target: 'chrome120', minify: true, legalComments: 'none',
   jsx: 'automatic', jsxImportSource: 'preact'
 })
