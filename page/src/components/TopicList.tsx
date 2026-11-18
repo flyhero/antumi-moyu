@@ -5,11 +5,12 @@ import { relativeTime } from '../relative-time'
 import { readKey } from '../saved-state'
 import type { ListState } from '../use-reader'
 import { ChannelPicker } from './ChannelPicker'
+import { RefreshIcon } from './icons'
 
 // The sidebar, as Antumi's list of conversations: the community and channel on top, then one row a
 // topic, its title on one line and what it is under it. The open one floats as a card; one read
 // before is quieter.
-export function TopicList({ communities, community, channel, list, openTopic, read, words, locale, now, onCommunity, onChannel, onOpen }: {
+export function TopicList({ communities, community, channel, list, openTopic, read, words, locale, now, onCommunity, onChannel, onOpen, onRefresh }: {
   communities: CommunityInfo[] | null
   community: CommunityInfo | null
   channel: Channel | null
@@ -22,6 +23,7 @@ export function TopicList({ communities, community, channel, list, openTopic, re
   onCommunity: (id: CommunityId) => void
   onChannel: (id: string) => void
   onOpen: (topic: Topic) => void
+  onRefresh: () => void
 }) {
   const topics = list.topics ?? []
   return (
@@ -38,6 +40,15 @@ export function TopicList({ communities, community, channel, list, openTopic, re
         <div className="sidebar-section">
           <span className="sidebar-section-label">{words.conversations}</span>
           {list.topics && <span className="count">{topics.length}</span>}
+          <button
+            type="button"
+            className="tool-button list-refresh"
+            aria-label={list.loading ? words.refreshingList : words.refreshList}
+            title={list.loading ? words.refreshingList : words.refreshList}
+            aria-busy={list.loading}
+            disabled={list.loading || !channel}
+            onClick={onRefresh}
+          ><RefreshIcon /></button>
           <ChannelPicker channels={community?.channels ?? []} current={channel} words={words} onPick={onChannel} />
         </div>
       </div>

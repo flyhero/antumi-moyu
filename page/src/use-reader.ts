@@ -4,15 +4,17 @@ import type { PageHost } from './host'
 import { callReader, errorMessage } from './reader-client'
 import { markRead, readKey, readSavedState, type SavedState } from './saved-state'
 import { TtlCache } from './ttl-cache'
+import { refreshOnExpiry } from './refresh-on-expiry'
 
 // What the reader knows and how it asks the backend for more. The forums are asked little: one
-// request for each thing the user does, lists kept 3 minutes and thread pages 5, nothing refreshed
-// in the background and nothing retried unless the user asks.
+// request for each thing the user does, lists kept 3 minutes and thread pages 5. A visible list
+// refreshes once when its cache expires; failed requests wait for the user to retry.
 
 const LIST_TTL = 3 * 60_000
 const THREAD_TTL = 5 * 60_000
 
-export type ListState = { key: string; topics: Topic[] | null; loading: boolean; error: string | null }
+type CachedList = { topics: Topic[]; expiresAt: number }
+export type ListState = { key: string; topics: Topic[] | null; loading: boolean; error: string | null; expiresAt: number | null }
 export type ThreadState = {
   topic: Topic
   pages: Thread[]
@@ -26,9 +28,9 @@ export function useReader(host: PageHost, onOpened: (thread: Thread) => void) {
   const [saved, setSaved] = useState<SavedState>(() => readSavedState(host.state))
   const [communities, setCommunities] = useState<CommunityInfo[] | null>(null)
   const [communitiesError, setCommunitiesError] = useState<string | null>(null)
-  const [list, setList] = useState<ListState>({ key: '', topics: null, loading: false, error: null })
+  const [list, setList] = useState<ListState>({ key: '', topics: null, loading: false, error: null, expiresAt: null })
   const [thread, setThread] = useState<ThreadState | null>(null)
-  const caches = useMemo(() => ({ lists: new TtlCache<Topic[]>(LIST_TTL), threads: new TtlCache<Thread>(THREAD_TTL) }), [])
+  const caches = useMemo(() => ({ lists: new TtlCache<CachedList>(LIST_TTL), threads: new TtlCache<Thread>(THREAD_TTL) }), [])
   // A newer request makes an older one's answer moot.
   const tickets = useRef({ list: 0, thread: 0 })
   const opened = useRef(onOpened)
@@ -58,14 +60,15 @@ export function useReader(host: PageHost, onOpened: (thread: Thread) => void) {
     const ticket = ++tickets.current.list
     const cached = force ? undefined : caches.lists.get(key)
     if (cached) {
-      setList({ key, topics: cached, loading: false, error: null })
+      setList({ key, ...cached, loading: false, error: null })
       return
     }
-    setList((previous) => ({ key, topics: previous.key === key ? previous.topics : null, loading: true, error: null }))
+    setList((previous) => ({ key, topics: previous.key === key ? previous.topics : null, loading: true, error: null, expiresAt: null }))
     callReader(host, 'list', { community: communityId, channel: channelId }).then(
       (topics) => {
-        caches.lists.set(key, topics)
-        if (ticket === tickets.current.list) setList({ key, topics, loading: false, error: null })
+        const cached = { topics, expiresAt: Date.now() + LIST_TTL }
+        caches.lists.set(key, cached)
+        if (ticket === tickets.current.list) setList({ key, ...cached, loading: false, error: null })
       },
       (error: unknown) => {
         if (ticket === tickets.current.list) setList((previous) => ({ ...previous, key, loading: false, error: errorMessage(error) }))
@@ -78,6 +81,11 @@ export function useReader(host: PageHost, onOpened: (thread: Thread) => void) {
   useEffect(() => {
     if (communityId && channelId) loadList(communityId, channelId, false)
   }, [communityId, channelId, loadList])
+
+  useEffect(() => {
+    if (!communityId || !channelId || list.key !== `${communityId}:${channelId}` || list.expiresAt === null) return
+    return refreshOnExpiry(list.expiresAt, () => loadList(communityId, channelId, true))
+  }, [communityId, channelId, list.key, list.expiresAt, loadList])
 
   const fetchPage = useCallback((topic: Topic, page: number, force: boolean) => {
     const ticket = ++tickets.current.thread
@@ -126,8 +134,13 @@ export function useReader(host: PageHost, onOpened: (thread: Thread) => void) {
     return 'loading'
   }
 
-  const refresh = () => {
+  const refreshList = () => {
+    if (list.loading) return
     if (community && channel) loadList(community.id, channel.id, true)
+  }
+
+  const refresh = () => {
+    refreshList()
     if (thread) openTopic(thread.topic, true)
   }
 
@@ -148,6 +161,7 @@ export function useReader(host: PageHost, onOpened: (thread: Thread) => void) {
     openTopic,
     nextPage,
     refresh,
+    refreshList,
     retry,
     selectCommunity: (id: CommunityId) => setSaved((state) => (state.community === id ? state : { ...state, community: id, channel: null })),
     selectChannel: (id: string) => setSaved((state) => ({ ...state, channel: id })),

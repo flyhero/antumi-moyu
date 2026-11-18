@@ -3,8 +3,7 @@ import type { Channel } from '../../../src/community'
 import type { Words } from '../dictionary'
 import { CheckIcon, ChevronDownIcon } from './icons'
 
-// Antumi's picker: a value as wide as its words with a small chevron, opening a menu of choices,
-// each with the command that picks it from the composer.
+// Antumi's picker: a value as wide as its words with a small chevron, opening a menu of choices.
 export function ChannelPicker({ channels, current, words, onPick }: {
   channels: readonly Channel[]
   current: Channel | null
@@ -52,7 +51,6 @@ export function ChannelPicker({ channels, current, words, onPick }: {
               }}
             >
               <span className="menu-item-label">{channel.name}</span>
-              <span className="menu-item-hint">/{channel.id}</span>
               <span className="menu-check">{channel.id === current?.id && <CheckIcon />}</span>
             </button>
           ))}

@@ -7,7 +7,7 @@ Two Antumi plugins, one for linux.do and one for V2EX, each with one page: the f
 - `page/` is the page, shown in a sandboxed frame: it cannot reach the network, only its own backend through the SDK's bridge (`page/src/main.tsx`; `preview.tsx` puts a mock in its place for `npm run preview`). It is built into one classic script and one stylesheet; no ES modules, no inline scripts, no fonts.
 - A community is one file in `src/communities/`. The page shows whichever the backend lists, and offers to switch only when there is more than one. Anonymous and read-only: no login, no posting.
 - Forum HTML is untrusted: the page sanitizes it before showing it, and links open through the host.
-- Ask the forums for little: one request per thing the user does, no background refresh, no retry loops. Say plainly when a forum refuses.
+- Ask the forums for little: one request per thing the user does, plus one refresh when a visible list's 3-minute cache expires. Hidden pages wait until visible; failed requests never retry automatically. Say plainly when a forum refuses.
 - Requests follow the user's proxy (`src/proxy.ts`: the environment first, then the system's setting, by the same rules as Antumi core), through a CONNECT tunnel (`src/tunnel.ts`).
 - Requests go out over HTTP/2 (`src/http.ts`), never `fetch`: linux.do's Cloudflare challenges HTTP/1.1 clients. linux.do's avatars and emoji are handed out from its CDN, since its own host refuses to show them in another page.
 - The preview's data (`page/src/mock-data.ts`) is made up: no real names or avatars under invented posts.

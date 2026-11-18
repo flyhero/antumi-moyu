@@ -203,6 +203,7 @@ export function App({ host }: { host: PageHost }) {
         onCommunity={(id) => run({ kind: 'community', community: id })}
         onChannel={reader.selectChannel}
         onOpen={(one) => openTopic(one)}
+        onRefresh={reader.refreshList}
       />
       <main className="chat-view">
         <ChatHeader topic={topic} busy={busy} words={words} onRefresh={() => run({ kind: 'refresh' })} onOpen={() => run({ kind: 'open' })} />
