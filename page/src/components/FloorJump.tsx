@@ -1,4 +1,4 @@
-import { useRef, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 import type { Words } from '../dictionary'
 import { EnterIcon, HashIcon } from './icons'
 
@@ -6,6 +6,13 @@ export function FloorJump({ words, onJump }: { words: Words; onJump: (floor: num
   const [value, setValue] = useState('')
   const panel = useRef<HTMLDetailsElement>(null)
   const input = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    const outside = (event: PointerEvent) => {
+      if (panel.current?.open && event.target instanceof Node && !panel.current.contains(event.target)) panel.current.open = false
+    }
+    document.addEventListener('pointerdown', outside)
+    return () => document.removeEventListener('pointerdown', outside)
+  }, [])
   const jump = () => {
     if (!input.current?.reportValidity()) return
     const floor = Number(value)

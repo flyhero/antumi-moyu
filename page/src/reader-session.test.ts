@@ -241,6 +241,17 @@ describe('reader sessions', () => {
     expect(document.querySelector('#floor-60')).not.toBeNull()
   })
 
+  it('closes the floor jump panel when clicking elsewhere', async () => {
+    const f = fixture(); await mount(f.host); await openTopic()
+    const trigger = document.querySelector<HTMLElement>('.floor-jump > summary')
+    const details = document.querySelector<HTMLDetailsElement>('.floor-jump')
+    if (!trigger || !details) throw new Error('Missing floor jump')
+    await act(() => trigger.click())
+    expect(details.open).toBe(true)
+    await act(() => { document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })) })
+    expect(details.open).toBe(false)
+  })
+
   it('preserves the current thread when a reply awaits moderation', async () => {
     const f = fixture(); f.result({ state: 'pending', message: 'Waiting for review' })
     await mount(f.host); await openTopic(); await type('Review me'); await click('发送回复')
