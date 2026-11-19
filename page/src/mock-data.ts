@@ -247,7 +247,7 @@ function threadParts(community: CommunityId, seed: Seed): { opening: string; rep
 // linux.do numbers its opening post 1 and pages by 20; V2EX numbers replies from 1 and gives them all.
 const PAGE = 20
 
-export function mockThread(community: CommunityId, id: string, page: number, now: number): Thread {
+export function mockThread(community: CommunityId, id: string, page: number, now: number, added: Post[] = []): Thread {
   const seed = topics[community].find((one) => one.id === id)
   if (!seed) throw new Error(community === 'linuxdo' ? '话题不存在或已被删除' : '主题未找到')
   const topic = toTopic(community, seed, now)
@@ -262,7 +262,8 @@ export function mockThread(community: CommunityId, id: string, page: number, now
     replyTo: reply.replyTo ?? null,
     likes: reply.likes ?? 0
   })
-  const all = replies.map(post)
+  const all = [...replies.map(post), ...added]
+  topic.replies = all.length
   const openingPost: Post = { floor: first - 1, author: seed.author, avatar: avatars[seed.author] ?? null, html: opening, time: now - (replies.length + 3) * 7 * 60_000, replyTo: null, likes: 4 }
   if (community === 'v2ex') return { topic, opening: page === 1 ? openingPost : null, posts: page === 1 ? all : [], page, more: false }
   // Page 1 holds the opening post and the replies after it, 20 posts in all.

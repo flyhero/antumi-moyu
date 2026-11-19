@@ -176,6 +176,31 @@ describe('linuxdo thread', () => {
   })
 })
 
+describe('linuxdo reply location', () => {
+  it('locates the correct page by stream position, not a floor with deleted gaps', async () => {
+    const stream = Array.from({ length: 25 }, (_, index) => index + 100)
+    const urls: string[] = []
+    const get: Get = async (url) => {
+      urls.push(url)
+      const body = url.includes('/80.json') ? topicJson([post(122, 80)], stream) : topicJson([post(120, 78), post(122, 80), post(124, 82)], stream)
+      return { body, headers: {}, status: 200 }
+    }
+    const result = await linuxdo(get).thread('7', 1, signal, { floor: 80 })
+    expect(result.page).toBe(2)
+    expect(result.posts.some((post) => post.floor === 80)).toBe(true)
+    expect(urls).toEqual(['https://linux.do/t/7/80.json', 'https://linux.do/t/topic/7.json?page=2'])
+  })
+
+  it('loads the last page in two reads without walking the whole topic', async () => {
+    const stream = Array.from({ length: 45 }, (_, index) => index + 100)
+    const urls: string[] = []
+    const get: Get = async (url) => { urls.push(url); return { body: topicJson([post(144, 45)], stream), headers: {}, status: 200 } }
+    const result = await linuxdo(get).thread('7', 1, signal, { tail: true })
+    expect(result.page).toBe(3)
+    expect(urls).toEqual(['https://linux.do/t/topic/7.json', 'https://linux.do/t/topic/7.json?page=3'])
+  })
+})
+
 describe('linuxdo errors', () => {
   const challenge = fixture('cloudflare-challenge.html')
   const blocked = 'linux.do 暂时拦住了请求，过一会儿再试'

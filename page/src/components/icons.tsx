@@ -13,6 +13,30 @@ export function EnterIcon() {
   return <svg {...stroked}><path d="M15.5 4.5v5a2.5 2.5 0 0 1-2.5 2.5H4.5M8 8.5 4.5 12 8 15.5" /></svg>
 }
 
+export function StreamingIcon({ active }: { active: boolean }) {
+  return <svg {...stroked}>
+    <path d="M3 5h10M3 10h7M3 15h8M14 9l3 3-3 3" />
+    {!active && <path d="m3.5 3.5 13 13" />}
+  </svg>
+}
+
+export function ImageDisplayIcon({ active }: { active: boolean }) {
+  return <svg {...stroked}>
+    <rect x="3" y="3.5" width="14" height="13" rx="2" />
+    <circle cx="7" cy="7.5" r="1" />
+    <path d="m4 14 4-4 3 3 2-2 4 4" />
+    {!active && <path d="m3.5 3.5 13 13" />}
+  </svg>
+}
+
+export function HashIcon() {
+  return <svg {...stroked}><path d="m8 3-2 14M14 3l-2 14M3 7h14M2 13h14" /></svg>
+}
+
+export function LeaveIcon() {
+  return <svg {...stroked}><path d="M8 4H4v12h4M9 10h8m-3-3 3 3-3 3" /></svg>
+}
+
 export function ChevronDownIcon() {
   return <svg {...stroked}><path d="M6 8l4 4 4-4" /></svg>
 }
@@ -33,8 +57,24 @@ export function ReplyIcon() {
   return <svg {...stroked}><path d="M8 5.5 4 9.5l4 4M4.5 9.5h7a4 4 0 0 1 4 4v1" /></svg>
 }
 
+export function BellIcon() {
+  return <svg {...stroked}><path d="M5 8a5 5 0 0 1 10 0c0 5 2 5 2 6H3c0-1 2-1 2-6Zm3 8a2 2 0 0 0 4 0" /></svg>
+}
+
+export function CloseIcon() {
+  return <svg {...stroked}><path d="m5.5 5.5 9 9m0-9-9 9" /></svg>
+}
+
 export function HeartIcon() {
   return <svg {...stroked}><path d="M10 16s-6-3.6-6-8a3.2 3.2 0 0 1 6-1.6A3.2 3.2 0 0 1 16 8c0 4.4-6 8-6 8Z" /></svg>
+}
+
+export function AvatarDisguiseIcon({ active }: { active: boolean }) {
+  return <svg {...stroked}>
+    <path d="M2.5 6.5C5.2 6.5 7.1 8 10 8s4.8-1.5 7.5-1.5v3.2c0 3-1.8 5.3-4.1 5.3-1.7 0-2.2-1.5-3.4-1.5S8.3 15 6.6 15c-2.3 0-4.1-2.3-4.1-5.3Z" />
+    <path d="M5 9.5h2.5M12.5 9.5H15" />
+    {!active && <path d="m3.5 3.5 13 13" />}
+  </svg>
 }
 
 // The assistant's mark, where an agent's logo would be.

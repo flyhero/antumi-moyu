@@ -30,6 +30,7 @@ export type Topic = z.infer<typeof Topic>
 
 export const Post = z.object({
   // The number the forum shows beside the post; 1 is the first reply on V2EX and the opening post on linux.do.
+  id: z.string().regex(/^\d{1,16}$/).optional(),
   floor: z.number().int().nonnegative(),
   author: z.string(),
   avatar: z.string().nullable(),
@@ -54,9 +55,68 @@ export const Thread = z.object({
 })
 export type Thread = z.infer<typeof Thread>
 
+export const ForumAccount = z.object({ username: z.string().min(1).max(100), unreadNotifications: z.number().int().nonnegative().optional(), userId: z.number().int().positive().optional() })
+export type ForumAccount = z.infer<typeof ForumAccount>
+export const ReplyTarget = z.object({
+  floor: z.number().int().positive(),
+  author: z.string().min(1).max(100).regex(/^[\p{L}\p{N}_.-]+$/u)
+})
+export type ReplyTarget = z.infer<typeof ReplyTarget>
+export const ReplyParams = z.object({
+  id: z.string().regex(/^\d{1,12}$/),
+  content: z.string().trim().min(1).max(8000),
+  target: ReplyTarget.optional()
+})
+export const ReplyLocation = z.object({ floor: z.number().int().positive().optional(), page: z.number().int().min(1).max(1000).optional() })
+export type ReplyLocation = z.infer<typeof ReplyLocation>
+export const ReplyFailure = z.object({
+  kind: z.enum(['login', 'rate-limit', 'unconfirmed', 'rejected']),
+  message: z.string(),
+  retryAfter: z.number().int().min(1).max(86400).optional()
+})
+export type ReplyFailure = z.infer<typeof ReplyFailure>
+export const ReplyResult = z.discriminatedUnion('state', [
+  z.object({ state: z.literal('sent'), message: z.string().nullable(), location: ReplyLocation.optional() }),
+  z.object({ state: z.literal('pending'), message: z.string().nullable() }),
+  z.object({ state: z.literal('failed'), failure: ReplyFailure })
+])
+export type ReplyResult = z.infer<typeof ReplyResult>
+
+export const ForumNotification = z.object({
+  id: z.string().regex(/^\d{1,16}$/),
+  kind: z.enum(['reply', 'mention', 'like', 'quote', 'message', 'other']),
+  actor: z.string().nullable(),
+  title: z.string(),
+  excerpt: z.string().nullable(),
+  time: z.number().nullable(),
+  timeLabel: z.string().nullable(),
+  read: z.boolean().nullable(),
+  url: z.string().url(),
+  target: z.object({ topic: Topic, floor: z.number().int().positive().max(1_000_000).optional(), page: z.number().int().min(1).max(1000).optional(), postId: z.string().regex(/^\d{1,16}$/).optional() }).nullable()
+})
+export type ForumNotification = z.infer<typeof ForumNotification>
+export const NotificationPage = z.object({
+  account: z.string(), items: z.array(ForumNotification), page: z.number().int().positive(), more: z.boolean(),
+  unread: z.number().int().nonnegative().nullable(), seenId: z.number().int().nonnegative().nullable(),
+  readOnOpen: z.boolean()
+})
+export type NotificationPage = z.infer<typeof NotificationPage>
+export const NotificationParams = z.object({ account: z.string().min(1).max(100), page: z.number().int().min(1).max(1000).default(1) })
+export const NotificationReadParams = z.object({ account: z.string().min(1).max(100), id: z.string().regex(/^\d{1,16}$/) })
+export const NotificationWatchParams = z.object({
+  account: z.string().min(1).max(100), clientId: z.string().regex(/^[a-f0-9]{32}$/),
+  cursor: z.number().int().min(-1).optional(), userId: z.number().int().positive().optional()
+})
+export const NotificationUpdate = z.discriminatedUnion('state', [
+  z.object({ state: z.literal('ok'), account: ForumAccount, cursor: z.number().int().min(-1).optional(), changed: z.boolean(),
+    interval: z.number().int().min(100).max(180_000) }),
+  z.object({ state: z.enum(['retry', 'login']), message: z.string(), retryAfter: z.number().int().min(1).max(86400).optional() })
+])
+export type NotificationUpdate = z.infer<typeof NotificationUpdate>
+
 export const ListParams = z.object({ community: CommunityId, channel: z.string().min(1).max(64) })
 export type ListParams = z.infer<typeof ListParams>
-export const ThreadParams = z.object({ community: CommunityId, id: z.string().regex(/^\d{1,12}$/), page: z.number().int().positive().max(1000).default(1) })
+export const ThreadParams = z.object({ community: CommunityId, id: z.string().regex(/^\d{1,12}$/), page: z.number().int().positive().max(1000).default(1), floor: z.number().int().positive().max(1_000_000).optional(), tail: z.boolean().optional() })
 export type ThreadParams = z.infer<typeof ThreadParams>
 
 // What a forum is to the reader. Each call is one visit to the forum at most two requests long; a
@@ -64,11 +124,18 @@ export type ThreadParams = z.infer<typeof ThreadParams>
 export type Community = {
   info: CommunityInfo
   list(channel: string, signal: AbortSignal): Promise<Topic[]>
-  thread(id: string, page: number, signal: AbortSignal): Promise<Thread>
+  thread(id: string, page: number, signal: AbortSignal, focus?: { floor?: number; tail?: boolean }): Promise<Thread>
 }
 
 // The page's calls to the backend, by method name: what it sends and what it gets.
 export type ReaderMethods = {
+  session: { params: undefined; result: ForumAccount | null }
+  login: { params: undefined; result: { opened: boolean } }
+  logout: { params: undefined; result: { disconnected: boolean } }
+  notifications: { params: z.input<typeof NotificationParams>; result: NotificationPage }
+  notificationRead: { params: z.input<typeof NotificationReadParams>; result: { read: boolean } }
+  notificationWatch: { params: z.input<typeof NotificationWatchParams>; result: NotificationUpdate }
+  reply: { params: z.input<typeof ReplyParams>; result: ReplyResult }
   communities: { params: undefined; result: CommunityInfo[] }
   list: { params: z.input<typeof ListParams>; result: Topic[] }
   thread: { params: z.input<typeof ThreadParams>; result: Thread }

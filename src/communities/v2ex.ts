@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { v2exReplyTarget } from './v2ex-reply-target.js'
 import type { Community, CommunityInfo, Post, Topic } from '../community.js'
 import { absoluteLinks, absoluteUrl } from '../absolute-urls.js'
 import { get as httpGet } from '../http.js'
@@ -88,36 +89,18 @@ function topicOf(raw: RawTopic): Topic {
   }
 }
 
-// "@name" in the reply text, with or without the link V2EX wraps it in, then an optional "#floor".
-const MENTION = /@(?:<a [^>]*>)?([A-Za-z0-9_-]+)(?:<\/a>)?(?:\s*#(\d+))?/g
-
-// V2EX has no reply-to field. A "#12" after the name names the floor outright; otherwise it is the
-// nearest earlier reply by that name.
-function replyTarget(html: string, floor: number, authors: string[]): number | null {
-  for (const [, name, number] of html.matchAll(MENTION)) {
-    if (!name) continue
-    const wanted = name.toLowerCase()
-    const named = number ? Number(number) : 0
-    if (named >= 1 && named < floor && authors[named - 1]?.toLowerCase() === wanted) return named
-    for (let index = floor - 2; index >= 0; index--) {
-      if (authors[index]?.toLowerCase() === wanted) return index + 1
-    }
-  }
-  return null
-}
-
 function toReplies(raws: RawReply[]): Post[] {
-  const authors = raws.map((raw) => raw.member?.username ?? '')
+  const authors = new Map(raws.map((raw, index) => [index + 1, raw.member?.username ?? '']))
   return raws.map((raw, index) => {
     const floor = index + 1
     const html = raw.content_rendered ?? ''
     return {
       floor,
-      author: authors[index] ?? '',
+      author: authors.get(floor) ?? '',
       avatar: avatarOf(raw.member),
       html: absoluteLinks(html, ORIGIN),
       time: millis(raw.created),
-      replyTo: replyTarget(html, floor, authors),
+      replyTo: v2exReplyTarget(html, floor, authors),
       likes: null
     }
   })

@@ -1,8 +1,47 @@
+import type { ForumNotification } from '../../src/community'
 import type { PageHost } from './host'
 
 // Every word the page shows, in the app's two languages.
 const zh = {
   newChat: '新会话',
+  myNotifications: '我的通知',
+  loginForNotifications: '登录后查看我的通知',
+  notificationCount: (count: number) => `我的通知（${count} 条未读）`,
+  refreshNotifications: '刷新通知',
+  closeNotifications: '关闭通知',
+  notificationsReadOnOpen: 'V2EX 查看通知列表后会清除未读计数。',
+  markNotificationRead: '标记为已读',
+  noNotifications: '还没有通知',
+  loadMoreNotifications: '加载更多通知',
+  communityNotification: '社区通知',
+  notificationReadFailed: (error: string) => `已读状态未更新：${error}`,
+  notificationAction: (kind: ForumNotification['kind'], actor: string | null) => {
+    const actions = { reply: '回复了你', mention: '提到了你', like: '赞了你的帖子', quote: '引用了你', message: '给你发了消息', other: '有新动态' }
+    return `${actor ? `@${actor} ` : ''}${actions[kind]}`
+  },
+  login: '登录',
+  logout: '退出登录',
+  notLoggedIn: '未登录',
+  loginInBrowser: '请在浏览器完成登录，然后检查状态',
+  checkLogin: '检查登录状态',
+  checkingLogin: '检查中…',
+  replyPlaceholder: '输入要发布到当前帖子的回复…',
+  loginToReply: '登录并打开帖子后可以回复',
+  replyHint: (key: string) => `回车发送 · ${key} + 回车换行`,
+  sendReply: '发送回复',
+  sendingReply: '发送中…',
+  replySent: '回复已发送',
+  replyToComment: (floor: number, name: string) => `回复 #${floor} @${name}`,
+  cancelReplyTarget: '取消指定回复',
+  loadPrevious: '加载前面的回复',
+  viewPost: '查看帖子',
+  loginAgain: '重新登录',
+  replyCooling: '请稍后再试',
+  rateLimitHint: '社区暂时限制了发送频率，请稍后手动发送。',
+  retryAfter: (seconds: number) => `社区要求等待约 ${seconds} 秒，届时可手动发送。`,
+  allowResend: '确认未发出，允许重发',
+  replyUnconfirmed: '上次发送结果尚未确认，草稿已保留。请先查看帖子，避免重复回复。',
+  draftNotSaved: '页面存储已满或不可用，草稿暂未保存；请保留当前页面。',
   conversations: '会话',
   channel: '频道',
   loading: '加载中…',
@@ -27,34 +66,66 @@ const zh = {
   refreshList: '刷新帖子列表',
   refreshingList: '正在刷新帖子列表…',
   openInBrowser: '在浏览器打开（o）',
-  run: '运行（Enter）',
-  placeholder: '输入命令：n 下一页 · r 刷新 · o 浏览器打开 · q 离开 · /频道 · 楼层号 · ? 帮助',
   stream: (on: boolean) => `流式输出：${on ? '开' : '关'}`,
   images: (show: boolean) => `图片：${show ? '显示' : '折叠'}`,
+  avatarDisguise: '头像伪装',
+  streaming: '流式输出',
+  showImages: '显示图片',
+  readingOptions: '阅读显示',
+  readingIntro: '从左侧选择一个话题开始阅读，登录后可在下方回复。',
+  jumpToFloor: '跳转楼层',
+  floorNumber: '楼层号',
+  jump: '跳转',
+  leave: '回到会话（q）',
+  avatars: (on: boolean) => `头像伪装：${on ? '开' : '关'}`,
   assistant: '助手',
-  help: '我可以帮你做这些事，在下面输入命令后回车：',
-  unknown: (text: string) => `没听懂「${text}」。可以这样说：`,
-  noChannel: (name: string, names: string) => `没有「${name}」这个频道。可选：${names}`,
   noMore: '已经是最后一页了。',
   noTopic: '先在左边选一个话题。',
-  floorMissing: (floor: number) => `第 ${floor} 楼不在已加载的内容里，可以用 n 往后翻。`,
-  commandsTitle: ['命令', '作用'],
-  // communities and channels: what there is to switch to here, as the commands to type; no
-  // communities when this plugin reads one forum alone.
-  commands: (communities: string, channels: string): Array<[string, string]> => {
-    const rows: Array<[string, string]> = [['n', '下一页'], ['r', '刷新列表和当前话题'], ['o', '在浏览器打开当前话题'], ['q', '离开（也可连按两次 Esc）']]
-    if (communities) rows.push([communities, '切换社区'])
-    if (channels) rows.push([channels, '切换频道（频道 id 或名字）'])
-    rows.push(['12', '跳到第 12 楼'], ['j / k', '下一个 / 上一个话题（不在输入框里时）'])
-    return rows
-  },
-  greeting: '有什么可以帮你的？'
+  floorMissing: (floor: number) => `第 ${floor} 楼不在已加载的内容里，可先点击「加载更多回复」。`
 }
 
 type Words = typeof zh
 
 const en: Words = {
   newChat: 'New chat',
+  myNotifications: 'My notifications',
+  loginForNotifications: 'Sign in to view your notifications',
+  notificationCount: (count) => `My notifications (${count} unread)`,
+  refreshNotifications: 'Refresh notifications',
+  closeNotifications: 'Close notifications',
+  notificationsReadOnOpen: 'V2EX clears its unread count when you view this list.',
+  markNotificationRead: 'Mark as read',
+  noNotifications: 'No notifications yet',
+  loadMoreNotifications: 'Load more notifications',
+  communityNotification: 'Community notification',
+  notificationReadFailed: (error) => `Read status was not updated: ${error}`,
+  notificationAction: (kind, actor) => {
+    const actions = { reply: 'replied to you', mention: 'mentioned you', like: 'liked your post', quote: 'quoted you', message: 'sent you a message', other: 'has an update' }
+    return `${actor ? `@${actor} ` : ''}${actions[kind]}`
+  },
+  login: 'Sign in',
+  logout: 'Sign out',
+  notLoggedIn: 'Not signed in',
+  loginInBrowser: 'Sign in in the browser, then check your status',
+  checkLogin: 'Check sign-in status',
+  checkingLogin: 'Checking…',
+  replyPlaceholder: 'Write a reply to this topic…',
+  loginToReply: 'Sign in and open a topic to reply',
+  replyHint: (key: string) => `Enter to send · ${key} + Enter for a new line`,
+  sendReply: 'Send reply',
+  sendingReply: 'Sending…',
+  replySent: 'Reply sent',
+  replyToComment: (floor, name) => `Reply to #${floor} @${name}`,
+  cancelReplyTarget: 'Cancel reply target',
+  loadPrevious: 'Load earlier replies',
+  viewPost: 'View topic',
+  loginAgain: 'Sign in again',
+  replyCooling: 'Please wait',
+  rateLimitHint: 'The forum is limiting replies. Wait before sending manually.',
+  retryAfter: (seconds) => `The forum asks you to wait about ${seconds} seconds, then send manually.`,
+  allowResend: 'Not posted; allow resending',
+  replyUnconfirmed: 'The last send is unconfirmed. Your draft is saved. Check the topic before resending.',
+  draftNotSaved: 'Page storage is full or unavailable. The draft is not saved; keep this page open.',
   conversations: 'Chats',
   channel: 'Channel',
   loading: 'Loading…',
@@ -79,26 +150,22 @@ const en: Words = {
   refreshList: 'Refresh topic list',
   refreshingList: 'Refreshing topic list…',
   openInBrowser: 'Open in browser (o)',
-  run: 'Run (Enter)',
-  placeholder: 'Type a command: n next page · r refresh · o open · q leave · /channel · floor number · ? help',
   stream: (on) => `Streaming: ${on ? 'on' : 'off'}`,
   images: (show) => `Images: ${show ? 'shown' : 'folded'}`,
+  avatarDisguise: 'Disguise avatars',
+  streaming: 'Stream replies',
+  showImages: 'Show images',
+  readingOptions: 'Reading display',
+  readingIntro: 'Pick a topic on the left to read. Sign in to reply below.',
+  jumpToFloor: 'Jump to floor',
+  floorNumber: 'Floor number',
+  jump: 'Go',
+  leave: 'Back to conversations (q)',
+  avatars: (on) => `Disguise avatars: ${on ? 'on' : 'off'}`,
   assistant: 'Assistant',
-  help: 'Here is what I can do. Type a command below and press Enter:',
-  unknown: (text) => `I did not get "${text}". Try one of these:`,
-  noChannel: (name, names) => `There is no channel "${name}". Try: ${names}`,
   noMore: 'This is the last page.',
   noTopic: 'Pick a topic on the left first.',
-  floorMissing: (floor) => `Floor ${floor} is not loaded; n loads the next page.`,
-  commandsTitle: ['Command', 'What it does'],
-  commands: (communities, channels) => {
-    const rows: Array<[string, string]> = [['n', 'Next page'], ['r', 'Refresh the list and this topic'], ['o', 'Open this topic in the browser'], ['q', 'Leave (or press Esc twice)']]
-    if (communities) rows.push([communities, 'Switch community'])
-    if (channels) rows.push([channels, 'Switch channel, by id or name'])
-    rows.push(['12', 'Jump to floor 12'], ['j / k', 'Next / previous topic, outside the input'])
-    return rows
-  },
-  greeting: 'What can I help you with?'
+  floorMissing: (floor) => `Floor ${floor} is not loaded; use Load more replies first.`
 }
 
 export type { Words }

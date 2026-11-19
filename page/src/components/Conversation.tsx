@@ -1,5 +1,8 @@
 import { Fragment } from 'preact'
 import { useEffect, useRef } from 'preact/hooks'
+import type { ReadingPosition } from '../saved-state'
+import { useReadingPosition } from '../use-reading-position'
+import type { Post } from '../../../src/community'
 import type { Words } from '../dictionary'
 import type { PageHost } from '../host'
 import type { ThreadState } from '../use-reader'
@@ -8,28 +11,30 @@ import { OpeningMessage } from './OpeningMessage'
 import { ReplyTurn } from './ReplyTurn'
 import { WorkingLine } from './WorkingLine'
 
-// Something the reader says in the chat: the command list, or a plain line.
-export type Notice = { kind: 'help'; intro: string } | { kind: 'text'; text: string }
-
 // The thread as a conversation: the opening post as the user's message, each reply as a turn.
-export function Conversation({ thread, notice, failure, commands, words, locale, now, showImages, shown, onTyped, onRetry, onLoadMore, onJump }: {
+export function Conversation({ thread, notice, failure, words, locale, now, showImages, disguiseAvatars, shown, onTyped, onRetry, onLoadMore, onJump, canReply, onReply, onLoadPrevious, positionKey, onPosition }: {
   thread: ThreadState | null
-  notice: Notice | null
+  notice: string | null
   // What failed outside the thread (the communities, the list).
   failure: string | null
-  // The command list as it stands here: what there is to switch to.
-  commands: Array<[string, string]>
   words: Words
   locale: PageHost['locale']
   now: number
   showImages: boolean
+  disguiseAvatars: boolean
   // How many of the first page's replies are out while they stream; null when all are.
   shown: number | null
   onTyped: (index: number, total: number) => void
   onRetry: () => void
   onLoadMore: () => void
+  onLoadPrevious: () => void
+  positionKey: string | null
+  onPosition: (key: string, position: ReadingPosition) => void
   onJump: (floor: number) => void
+  canReply: boolean
+  onReply: (post: Post) => void
 }) {
+  const list = useReadingPosition(positionKey, thread, shown !== null, onPosition)
   const said = useRef<HTMLDivElement>(null)
   useEffect(() => {
     said.current?.scrollIntoView({ block: 'nearest' })
@@ -45,18 +50,22 @@ export function Conversation({ thread, notice, failure, commands, words, locale,
   const streaming = shown !== null
 
   return (
-    <div className="chat-list">
-      {!thread && <AssistantNotice intro={words.help} commands={commands} words={words} />}
+    <div ref={list} className="chat-list" data-restoring={thread?.focus ? true : undefined}>
+      {!thread && <AssistantNotice intro={words.readingIntro} words={words} />}
+      {pages[0] && pages[0].page > 1 && <button type="button" className="button chat-more" disabled={thread?.loading !== null} onClick={onLoadPrevious}>{words.loadPrevious}</button>}
       {pages.map((page, pageIndex) => {
         const posts = pageIndex === 0 && shown !== null ? page.posts.slice(0, shown) : page.posts
         return (
           <Fragment key={page.page}>
             {page.page > 1 && <div className="chat-divider">{words.page(page.page)}</div>}
-            {page.opening && <OpeningMessage post={page.opening} words={words} locale={locale} now={now} showImages={showImages} />}
+            {page.opening && <OpeningMessage post={page.opening} page={page.page} words={words} locale={locale} now={now} showImages={showImages} />}
             {posts.map((post, index) => (
               <ReplyTurn
                 key={post.floor}
                 post={post}
+                page={page.page}
+                community={page.topic.community}
+                disguiseAvatars={disguiseAvatars}
                 words={words}
                 locale={locale}
                 now={now}
@@ -65,6 +74,8 @@ export function Conversation({ thread, notice, failure, commands, words, locale,
                 onTyped={() => onTyped(index, page.posts.length)}
                 replyName={post.replyTo === null ? undefined : authors.get(post.replyTo)}
                 onJump={onJump}
+                canReply={canReply}
+                onReply={onReply}
               />
             ))}
           </Fragment>
@@ -79,7 +90,7 @@ export function Conversation({ thread, notice, failure, commands, words, locale,
       )}
       {notice && (
         <div ref={said} className="chat-said">
-          {notice.kind === 'help' ? <AssistantNotice intro={notice.intro} commands={commands} words={words} /> : <ChatNotice text={notice.text} words={words} />}
+          <ChatNotice text={notice} words={words} />
         </div>
       )}
     </div>

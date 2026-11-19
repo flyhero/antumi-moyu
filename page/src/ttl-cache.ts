@@ -31,6 +31,10 @@ export class TtlCache<V> {
     }
   }
 
+  clear(): void {
+    this.entries.clear()
+  }
+
   delete(key: string): void {
     this.entries.delete(key)
   }

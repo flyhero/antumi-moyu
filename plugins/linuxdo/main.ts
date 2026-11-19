@@ -1,6 +1,5 @@
 import { runPlugin } from '@antumi/plugin-sdk'
-import { linuxdo } from '../../src/communities/linuxdo.js'
-import { makeReader } from '../../src/reader.js'
+import { makeBrowserReader } from '../../src/browser-reader.js'
 import manifest from './manifest.json' with { type: 'json' }
 
-runPlugin({ manifest, pages: { reader: makeReader([linuxdo()]) } })
+runPlugin({ manifest, pages: { reader: makeBrowserReader('linuxdo') } })

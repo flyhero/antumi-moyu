@@ -1,12 +1,13 @@
 {
   "id": "antumi.moyu-v2ex",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "engines": { "antumi": ">=0.21.8-beta.1 <1.0.0" },
   "contributes": {
     "pages": [
-      { "id": "reader", "label": "阅读 V", "translations": { "en": { "label": "Reader V" } }, "entry": "page/index.html" }
+      { "id": "reader", "label": "阅读 V", "translations": { "en": { "label": "Reader V" } }, "entry": "page/index.html", "icon": { "path": "m4 4 6 12 6-12" } }
     ]
   },
   "entry": { "runtime": "node", "main": "main.mjs" },
+  "browserSites": [{ "id": "forum", "origin": "https://www.v2ex.com", "loginPath": "/signin" }],
   "env": ["HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY", "NO_PROXY"]
 }

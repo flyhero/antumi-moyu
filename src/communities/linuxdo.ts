@@ -141,7 +141,19 @@ export function linuxdo(get: Get = httpGet): Community {
       return topics
     },
 
-    async thread(id, page, signal) {
+    async thread(id, page, signal, focus) {
+      if (focus?.floor || focus?.tail) {
+        const path = focus.floor ? `/t/${id}/${focus.floor}.json` : `/t/topic/${id}.json`
+        const near = RawThread.safeParse(parseJson(checked(await get(ORIGIN + path, signal)), 'linux.do'))
+        if (!near.success) throw new Error(UNREADABLE)
+        const stream = near.data.post_stream.stream ?? []
+        if (focus.tail) page = Math.max(1, Math.ceil(stream.length / PAGE_SIZE))
+        else {
+          const closest = near.data.post_stream.posts.toSorted((a, b) => Math.abs(a.post_number - (focus.floor ?? 1)) - Math.abs(b.post_number - (focus.floor ?? 1)))[0]
+          const index = closest ? stream.indexOf(closest.id) : -1
+          page = index >= 0 ? Math.floor(index / PAGE_SIZE) + 1 : 1
+        }
+      }
       const query = page > 1 ? `?page=${page}` : ''
       const body = checked(await get(`${ORIGIN}/t/topic/${id}.json${query}`, signal), '帖子不存在，或者需要登录才能看')
       const parsed = RawThread.safeParse(parseJson(body, 'linux.do'))

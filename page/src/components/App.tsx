@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
-import { findChannel, parseCommand, type Command } from '../commands'
+import { useNotifications } from '../use-notifications'
+import { NotificationsMenu } from './NotificationsMenu'
 import { dictionary } from '../dictionary'
 import { doublePress } from '../double-press'
 import { isWebUrl } from '../forum-html-rules'
@@ -9,8 +10,12 @@ import { useReader } from '../use-reader'
 import { useStream } from '../use-stream'
 import { ChatHeader } from './ChatHeader'
 import { Composer } from './Composer'
-import { Conversation, type Notice } from './Conversation'
+import { Conversation } from './Conversation'
 import { TopicList } from './TopicList'
+import { SessionBar } from './SessionBar'
+import { useForumSession } from '../use-forum-session'
+import { usePageState } from '../use-page-state'
+import { useReply } from '../use-reply'
 
 function isTyping(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
@@ -22,15 +27,23 @@ export function App({ host }: { host: PageHost }) {
   const now = useNow()
   const stream = useStream()
   const streamWanted = useRef(false)
-  const reader = useReader(host, (thread) => {
-    if (streamWanted.current) stream.start(thread.posts.length)
+  const session = useForumSession(host)
+  const store = usePageState(host)
+  const reader = useReader(host, store, (thread, restoring) => {
+    if (!restoring && streamWanted.current) stream.start(thread.posts.length)
     else stream.finish()
-  })
+  }, session.account?.username ?? null)
   streamWanted.current = reader.saved.stream && !reduced
-  const [notice, setNotice] = useState<Notice | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const input = useRef<HTMLTextAreaElement>(null)
   const escape = useMemo(() => doublePress(1000), [])
   const thread = reader.thread
+  const reply = useReply(host, thread?.topic ?? null, session.account?.username ?? null, store, (topic, result) => {
+    stream.finish()
+    if (result.state === 'sent') reader.showSent(topic, result.location)
+    reader.refreshList()
+  })
+  const notifications = useNotifications(host, reader.community?.id ?? null, session.account)
   const streaming = stream.shown !== null
 
   // The app's look: the tokens are on :root already; the scheme decides the browser's own parts.
@@ -69,17 +82,21 @@ export function App({ host }: { host: PageHost }) {
     reader.openTopic(topic, force)
   }
 
-  const say = (text: string) => setNotice({ kind: 'text', text })
+  const say = (text: string) => setNotice(text)
 
   const jump = (floor: number) => {
-    const target = document.getElementById(`floor-${floor}`)
-    if (!target) {
-      say(words.floorMissing(floor))
-      return
-    }
-    target.scrollIntoView({ block: 'start', behavior: reduced ? 'auto' : 'smooth' })
-    target.setAttribute('data-flash', '')
-    setTimeout(() => target.removeAttribute('data-flash'), 1200)
+    setNotice(null)
+    stream.finish()
+    requestAnimationFrame(() => {
+      const target = document.getElementById(`floor-${floor}`)
+      if (!target) {
+        say(words.floorMissing(floor))
+        return
+      }
+      target.scrollIntoView({ block: 'start', behavior: reduced ? 'auto' : 'smooth' })
+      target.setAttribute('data-flash', '')
+      setTimeout(() => target.removeAttribute('data-flash'), 1200)
+    })
   }
 
   const stepTopic = (delta: number) => {
@@ -93,56 +110,20 @@ export function App({ host }: { host: PageHost }) {
     document.querySelector(`[data-topic="${topic.community}:${topic.id}"]`)?.scrollIntoView({ block: 'nearest' })
   }
 
-  const run = (command: Command) => {
-    if (command.kind !== 'none') setNotice(null)
-    switch (command.kind) {
-      case 'none':
-        return
-      case 'next': {
-        const result = reader.nextPage()
-        if (result === 'closed') say(words.noTopic)
-        if (result === 'last') say(words.noMore)
-        return
-      }
-      case 'refresh':
-        stream.finish()
-        reader.refresh()
-        return
-      case 'open':
-        if (thread) host.open(thread.topic.url)
-        else say(words.noTopic)
-        return
-      case 'leave':
-        host.leave()
-        return
-      case 'help':
-        setNotice({ kind: 'help', intro: words.help })
-        return
-      case 'unknown':
-        setNotice({ kind: 'help', intro: words.unknown(command.text) })
-        return
-      case 'community':
-        // A forum this plugin does not read is a word it does not know.
-        if (!reader.communities?.some((one) => one.id === command.community)) {
-          setNotice({ kind: 'help', intro: words.unknown(`/${command.community}`) })
-          return
-        }
-        stream.finish()
-        reader.selectCommunity(command.community)
-        return
-      case 'channel': {
-        const channels = reader.community?.channels ?? []
-        const channel = findChannel(channels, command.name)
-        if (channel) reader.selectChannel(channel.id)
-        else say(words.noChannel(command.name, channels.map((one) => `/${one.id}`).join(' ')))
-        return
-      }
-      case 'floor':
-        // Floors still streaming in are put out at once, then found.
-        stream.finish()
-        requestAnimationFrame(() => jump(command.floor))
-        return
-    }
+  const nextPage = () => {
+    setNotice(null)
+    const result = reader.nextPage()
+    if (result === 'closed') say(words.noTopic)
+    if (result === 'last') say(words.noMore)
+  }
+  const refresh = () => {
+    setNotice(null)
+    stream.finish()
+    reader.refresh()
+  }
+  const openInBrowser = () => {
+    if (thread) host.open(thread.topic.url)
+    else say(words.noTopic)
   }
 
   // Keys anywhere in the page: any key ends the streaming at once; Esc twice within a second
@@ -151,6 +132,7 @@ export function App({ host }: { host: PageHost }) {
   streamingNow.current = streaming
   const keys = useRef<(event: KeyboardEvent) => void>(() => {})
   keys.current = (event) => {
+    if (event.isComposing) return
     if (streaming && !['Shift', 'Control', 'Alt', 'Meta'].includes(event.key)) stream.finish()
     if (event.key === 'Escape') {
       if (escape()) {
@@ -160,13 +142,17 @@ export function App({ host }: { host: PageHost }) {
       if (event.target === input.current) input.current?.blur()
       return
     }
+    if (event.target instanceof Element && event.target.closest('[data-notifications-panel]')) return
     if (isTyping(event.target) || event.metaKey || event.ctrlKey || event.altKey) return
     if (event.key === 'j' || event.key === 'k') {
       event.preventDefault()
       stepTopic(event.key === 'j' ? 1 : -1)
-    } else if (event.key === '/') {
-      // Straight into the composer, the slash and all.
-      input.current?.focus()
+    } else if (['n', 'r', 'o', 'q'].includes(event.key)) {
+      event.preventDefault()
+      if (event.key === 'n') nextPage()
+      if (event.key === 'r') refresh()
+      if (event.key === 'o') openInBrowser()
+      if (event.key === 'q') host.leave()
     }
   }
   useEffect(() => {
@@ -182,9 +168,6 @@ export function App({ host }: { host: PageHost }) {
     }
   }, [])
   const failure = reader.communitiesError ?? reader.list.error
-  const others = reader.communities && reader.communities.length > 1 ? reader.communities.map((one) => `/${one.id}`).join('  ') : ''
-  const channels = reader.community?.channels ?? []
-  const commands = words.commands(others, `${channels.slice(0, 3).map((one) => `/${one.id}`).join('  ')}${channels.length > 3 ? ' …' : ''}`)
   const topic = thread?.topic ?? null
   const busy = (thread?.loading ?? null) !== null || streaming
 
@@ -200,38 +183,61 @@ export function App({ host }: { host: PageHost }) {
         words={words}
         locale={host.locale}
         now={now}
-        onCommunity={(id) => run({ kind: 'community', community: id })}
+        onCommunity={(id) => { setNotice(null); stream.finish(); reader.selectCommunity(id) }}
         onChannel={reader.selectChannel}
         onOpen={(one) => openTopic(one)}
         onRefresh={reader.refreshList}
       />
       <main className="chat-view">
-        <ChatHeader topic={topic} busy={busy} words={words} onRefresh={() => run({ kind: 'refresh' })} onOpen={() => run({ kind: 'open' })} />
+        <ChatHeader topic={topic} busy={busy} words={words} onRefresh={refresh} onOpen={openInBrowser} onJump={jump} onLeave={() => host.leave()}
+          notifications={<NotificationsMenu inbox={notifications} words={words} locale={host.locale} now={now} onSelect={(item) => {
+            setNotice(null)
+            stream.finish()
+            if (item.target) reader.openAt(item.target.topic, item.target)
+            else host.open(item.url)
+          }} />} />
+        <SessionBar session={session} words={words} />
         <Conversation
           key={topic ? `${topic.community}:${topic.id}` : 'none'}
           thread={thread}
           notice={notice}
           failure={failure}
-          commands={commands}
           words={words}
           locale={host.locale}
           now={now}
           showImages={reader.saved.images}
+          disguiseAvatars={reader.saved.disguiseAvatars}
           shown={stream.shown}
           onTyped={stream.typed}
           onRetry={reader.retry}
-          onLoadMore={() => run({ kind: 'next' })}
+          onLoadMore={nextPage}
+          onLoadPrevious={reader.previousPage}
+          positionKey={reader.positionKey}
+          onPosition={reader.rememberPosition}
           onJump={jump}
+          canReply={session.account !== null && !reply.sending}
+          onReply={(post) => {
+            if (!session.account || reply.sending) return
+            reply.setTarget({ floor: post.floor, author: post.author })
+            stream.finish()
+            input.current?.focus()
+          }}
         />
         <Composer
           words={words}
-          busy={busy && !reduced}
           stream={reader.saved.stream}
           images={reader.saved.images}
+          disguiseAvatars={reader.saved.disguiseAvatars}
           input={input}
           onStream={reader.setStream}
           onImages={reader.setImages}
-          onRun={(text) => run(parseCommand(text))}
+          onDisguiseAvatars={reader.setDisguiseAvatars}
+          reply={reply}
+          storageError={store.storageError}
+          onLogin={() => void session.login()}
+          loginBusy={session.busy}
+          onViewPost={openInBrowser}
+          canReply={session.account !== null && topic !== null}
         />
       </main>
     </div>

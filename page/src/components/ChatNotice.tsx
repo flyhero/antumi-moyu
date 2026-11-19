@@ -13,8 +13,8 @@ export function ChatNotice({ text, words, onRetry }: { text: string; words: Word
   )
 }
 
-// The command list, said by the assistant as a reply of its own.
-export function AssistantNotice({ intro, commands, words }: { intro: string; commands: Array<[string, string]>; words: Words }) {
+// The reading introduction, drawn as an assistant turn.
+export function AssistantNotice({ intro, words }: { intro: string; words: Words }) {
   return (
     <div className="chat-entry" data-notice="">
       <div className="chat-turn-head">
@@ -24,14 +24,6 @@ export function AssistantNotice({ intro, commands, words }: { intro: string; com
       <div className="chat-assistant">
         <div className="chat-markdown">
           <p>{intro}</p>
-          <table>
-            <thead><tr>{words.commandsTitle.map((title) => <th key={title}>{title}</th>)}</tr></thead>
-            <tbody>
-              {commands.map(([command, meaning]) => (
-                <tr key={command}><td><code>{command}</code></td><td>{meaning}</td></tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </div>
     </div>

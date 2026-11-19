@@ -1,15 +1,20 @@
+import type { ComponentChildren } from 'preact'
 import type { Topic } from '../../../src/community'
 import type { Words } from '../dictionary'
-import { ExternalIcon, RefreshIcon } from './icons'
+import { ExternalIcon, LeaveIcon, RefreshIcon } from './icons'
+import { FloorJump } from './FloorJump'
 
 // The conversation's header: its status mark, the topic's title, then who and where in muted text,
-// and the page's two tools on the right.
-export function ChatHeader({ topic, busy, words, onRefresh, onOpen }: {
+// and the reading tools on the right.
+export function ChatHeader({ topic, busy, words, onRefresh, onOpen, onJump, onLeave, notifications }: {
   topic: Topic | null
   busy: boolean
   words: Words
   onRefresh: () => void
   onOpen: () => void
+  onJump: (floor: number) => void
+  onLeave: () => void
+  notifications: ComponentChildren
 }) {
   return (
     <header className="chat-header">
@@ -21,8 +26,11 @@ export function ChatHeader({ topic, busy, words, onRefresh, onOpen }: {
         {topic && topic.replies !== null && <span className="muted">{words.replies(topic.replies)}</span>}
       </div>
       <div className="toolbar">
+        {notifications}
+        {topic && <FloorJump key={`${topic.community}:${topic.id}`} words={words} onJump={onJump} />}
         <button type="button" className="tool-button" aria-label={words.refresh} title={words.refresh} onClick={onRefresh}><RefreshIcon /></button>
         <button type="button" className="tool-button" aria-label={words.openInBrowser} title={words.openInBrowser} disabled={!topic} onClick={onOpen}><ExternalIcon /></button>
+        <button type="button" className="tool-button" aria-label={words.leave} title={words.leave} onClick={onLeave}><LeaveIcon /></button>
       </div>
     </header>
   )

@@ -40,9 +40,9 @@ export function makeReader(all: Community[]) {
     },
 
     async thread(params: unknown, context: CallContext): Promise<unknown> {
-      const { community, id, page } = checkedParams(ThreadParams, params)
+      const { community, id, page, floor, tail } = checkedParams(ThreadParams, params)
       const forum = pick(community)
-      const parsed = Thread.safeParse(await forum.thread(id, page, context.signal))
+      const parsed = Thread.safeParse(await forum.thread(id, page, context.signal, { floor, tail }))
       if (!parsed.success) throw new Error(`${forum.info.name} 返回的内容读不懂`)
       return parsed.data
     }

@@ -1,4 +1,4 @@
-import type { Post } from '../../../src/community'
+import type { CommunityId, Post } from '../../../src/community'
 import type { Words } from '../dictionary'
 import type { PageHost } from '../host'
 import { absoluteTime, relativeTime } from '../relative-time'
@@ -8,8 +8,11 @@ import { HeartIcon, ReplyIcon } from './icons'
 
 // A reply, drawn as an agent's turn: who answers where the agent's name goes, the floor where the
 // model goes, then the reply with no bubble, and a quiet footer.
-export function ReplyTurn({ post, words, locale, now, showImages, typing, onTyped, replyName, onJump }: {
+export function ReplyTurn({ post, page, community, disguiseAvatars, words, locale, now, showImages, typing, onTyped, replyName, onJump, canReply, onReply }: {
   post: Post
+  page: number
+  community: CommunityId
+  disguiseAvatars: boolean
   words: Words
   locale: PageHost['locale']
   now: number
@@ -19,13 +22,15 @@ export function ReplyTurn({ post, words, locale, now, showImages, typing, onType
   // The author of the floor it answers, when that floor is loaded.
   replyName: string | undefined
   onJump: (floor: number) => void
+  canReply: boolean
+  onReply: (post: Post) => void
 }) {
   const replyTo = post.replyTo
   const likes = post.likes ?? 0
   return (
-    <div className="chat-entry" id={`floor-${post.floor}`}>
+    <div className="chat-entry" id={`floor-${post.floor}`} data-reading-floor={post.floor} data-reading-page={page}>
       <div className="chat-turn-head">
-        <Avatar src={post.avatar} name={post.author} />
+        <Avatar src={post.avatar} name={post.author} community={community} disguise={disguiseAvatars} />
         <span className="chat-turn-head-name">{post.author}</span>
         <span className="chat-turn-head-model">#{post.floor}</span>
         {post.time !== null && <span className="chat-message-time" title={absoluteTime(post.time)}>{relativeTime(post.time, now, locale)}</span>}
@@ -44,9 +49,14 @@ export function ReplyTurn({ post, words, locale, now, showImages, typing, onType
           </button>
         )}
         <ForumHtml className="chat-markdown" html={post.html} showImages={showImages} words={words} typing={typing} onTyped={onTyped} />
-        {likes > 0 && !typing && (
+        {!typing && (
           <div className="chat-message-actions chat-turn-actions">
-            <span className="chat-turn-likes" title={words.likes(likes)}><HeartIcon />{likes}</span>
+            {likes > 0 && <span className="chat-turn-likes" title={words.likes(likes)}><HeartIcon />{likes}</span>}
+            <button type="button" className="chat-comment-reply" disabled={!canReply}
+              title={canReply ? words.replyToComment(post.floor, post.author) : words.loginToReply}
+              aria-label={words.replyToComment(post.floor, post.author)} onClick={() => onReply(post)}>
+              <ReplyIcon />
+            </button>
           </div>
         )}
       </div>

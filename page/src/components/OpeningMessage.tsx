@@ -7,8 +7,9 @@ import { ForumHtml } from './ForumHtml'
 
 // What the author wrote, as the user's own message: a bubble on the right. A long one is held to
 // about twelve lines, fading out, until opened.
-export function OpeningMessage({ post, words, locale, now, showImages }: {
+export function OpeningMessage({ post, page, words, locale, now, showImages }: {
   post: Post
+  page: number
   words: Words
   locale: PageHost['locale']
   now: number
@@ -30,7 +31,7 @@ export function OpeningMessage({ post, words, locale, now, showImages }: {
   }, [post.html, showImages, open])
 
   return (
-    <div className="chat-entry" data-user="" id={`floor-${post.floor}`}>
+    <div className="chat-entry" data-user="" id={`floor-${post.floor}`} data-reading-floor={post.floor} data-reading-page={page}>
       <div ref={bubble} className="chat-user" data-clamped={!open || undefined} data-clipped={(long && !open) || undefined}>
         <ForumHtml className="chat-user-text" html={post.html} showImages={showImages} words={words} />
       </div>
