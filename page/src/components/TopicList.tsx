@@ -148,7 +148,7 @@ function ListFrame({ saved, words, onWidth, children }: { saved: number, words: 
   }, [])
   const offset = (clientX: number) => clientX - (aside.current?.getBoundingClientRect().left ?? 0)
   return (
-    <aside ref={aside} className="sidebar" style={{ width: shown }}>
+    <aside ref={aside} className="sidebar" style={{ width: `${shown}px` }}>
       {children}
       <div
         className="sidebar-resizer"

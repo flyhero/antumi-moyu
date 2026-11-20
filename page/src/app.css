@@ -74,7 +74,7 @@ button { font: inherit; color: inherit; }
   top: 0;
   right: -5px;
   bottom: 0;
-  z-index: 3;
+  z-index: 5;
   width: 9px;
   cursor: col-resize;
   touch-action: none;
@@ -95,7 +95,7 @@ button { font: inherit; color: inherit; }
 .sidebar-resizer:focus-visible::after,
 .sidebar-resizer[data-dragging='true']::after { background: var(--accent); }
 body[data-resizing-list] { cursor: col-resize; user-select: none; }
-.sidebar-head { display: flex; flex-direction: column; gap: 8px; padding: 12px 8px 4px; }
+.sidebar-head { position: relative; z-index: 4; display: flex; flex-direction: column; gap: 8px; padding: 12px 8px 4px; }
 .segmented { display: flex; gap: 2px; padding: 2px; border-radius: var(--radius); background: var(--fill); }
 .segmented button {
   flex: 1;
@@ -714,8 +714,16 @@ body[data-resizing-list] { cursor: col-resize; user-select: none; }
 .title-cover-field::placeholder { color: var(--text-3); }
 .title-cover-field:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .title-cover-anchor[data-open] .chat-picker[data-tooltip]::after { content: none; }
-/* In the sidebar's header the editor and the hint open downward, aligned to the right edge. */
-.sidebar .title-cover-editor { top: calc(100% + 6px); right: 0; bottom: auto; left: auto; }
+/* The editor hangs from a button at the list's right edge. Position it against the header
+   instead, so a narrow list keeps the whole panel inside instead of spilling out to the left. */
+.sidebar .title-cover-anchor { position: static; }
+.sidebar .title-cover-editor {
+  top: calc(100% + 4px);
+  right: 8px;
+  bottom: auto;
+  left: 8px;
+  width: auto;
+}
 .sidebar .chat-picker[data-tooltip]::after { top: calc(100% + 6px); right: 0; bottom: auto; left: auto; }
 /* One hint for the reading switches, above the button, as soon as the pointer is there.
    The browser's own title waits, and the wait is different for each. */
