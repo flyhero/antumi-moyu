@@ -55,9 +55,9 @@ button { font: inherit; color: inherit; }
 
 .app { display: flex; height: 100%; min-height: 0; }
 
-/* Sidebar: Antumi's conversation list. */
+/* Sidebar: the conversation list's default width. */
 .sidebar {
-  flex: 0 0 260px;
+  flex: 0 0 320px;
   display: flex;
   flex-direction: column;
   min-height: 0;
