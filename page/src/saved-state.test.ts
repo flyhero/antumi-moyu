@@ -16,7 +16,7 @@ describe('readSavedState', () => {
       images: 'yes',
       read: { 'v2ex:123': 4, 'linuxdo:9': -1, 'reddit:1': 3, 'v2ex:abc': 2, 'linuxdo:77': 1.5, 'linuxdo:78': 20 }
     })
-    expect(state).toEqual({ community: 'v2ex', channel: 'python', stream: false, images: false, disguiseAvatars: false, drafts: {}, positions: {}, read: { 'v2ex:123': 4, 'linuxdo:78': 20 } })
+    expect(state).toEqual({ community: 'v2ex', channel: 'python', stream: false, images: false, disguiseAvatars: false, listWidth: 320, drafts: {}, positions: {}, read: { 'v2ex:123': 4, 'linuxdo:78': 20 } })
   })
 
   it('round-trips avatar disguise and keeps older saved pages compatible', () => {

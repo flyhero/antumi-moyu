@@ -187,6 +187,8 @@ export function App({ host }: { host: PageHost }) {
         onChannel={reader.selectChannel}
         onOpen={(one) => openTopic(one)}
         onRefresh={reader.refreshList}
+        listWidth={store.state.listWidth}
+        onListWidth={(width) => store.update((state) => state.listWidth === width ? state : { ...state, listWidth: width })}
       />
       <main className="chat-view">
         <ChatHeader topic={topic} busy={busy} words={words} onRefresh={refresh} onOpen={openInBrowser} onJump={jump} onLeave={() => host.leave()}

@@ -469,6 +469,30 @@ describe('my notifications', () => {
     expect(f.host.leave).not.toHaveBeenCalled()
   })
 
+  it('resizes the topic list from its edge and restores the default on a double-click', async () => {
+    const previous = window.innerWidth
+    window.innerWidth = 1280
+    try {
+      const f = fixture()
+      await mount(f.host)
+      const edge = document.querySelector<HTMLElement>('.sidebar-resizer')
+      const aside = document.querySelector<HTMLElement>('.sidebar')
+      if (!edge || !aside) throw new Error('Missing list edge')
+      aside.getBoundingClientRect = () => ({ left: 0, top: 0, right: 320, bottom: 800, width: 320, height: 800, x: 0, y: 0, toJSON: () => ({}) })
+      expect(edge.getAttribute('aria-valuenow')).toBe('320')
+      const point = (type: string, clientX: number) => edge.dispatchEvent(new PointerEvent(type, { button: 0, clientX, pointerId: 1, bubbles: true, cancelable: true }))
+      await act(() => { point('pointerdown', 320) })
+      await act(() => { point('pointermove', 360) })
+      await act(() => { point('pointerup', 360) }); await settle()
+      expect(f.saved().listWidth).toBe(360)
+      expect(edge.getAttribute('aria-valuenow')).toBe('360')
+      await act(() => { edge.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })) }); await settle()
+      expect(f.saved().listWidth).toBe(320)
+    } finally {
+      window.innerWidth = previous
+    }
+  })
+
   it('discards a previous account’s delayed notifications after logout and a new login', async () => {
     const f = fixture(); const pending = f.holdNotifications(); await mount(f.host); await openNotifications()
     await click('退出登录'); f.account('bob'); await click('检查登录状态'); await openNotifications()

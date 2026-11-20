@@ -82,7 +82,10 @@ const zh = {
   assistant: '助手',
   noMore: '已经是最后一页了。',
   noTopic: '先在左边选一个话题。',
-  floorMissing: (floor: number) => `第 ${floor} 楼不在已加载的内容里，可先点击「加载更多回复」。`
+  floorMissing: (floor: number) => `第 ${floor} 楼不在已加载的内容里，可先点击「加载更多回复」。`,
+  resizeList: '调整帖子列表宽度',
+  listWidthPixels: (shown: number) => `帖子列表 ${shown} 像素`,
+  resetListWidth: '拖动调整宽度，双击恢复默认'
 }
 
 type Words = typeof zh
@@ -167,7 +170,10 @@ const en: Words = {
   assistant: 'Assistant',
   noMore: 'This is the last page.',
   noTopic: 'Pick a topic on the left first.',
-  floorMissing: (floor) => `Floor ${floor} is not loaded; use Load more replies first.`
+  floorMissing: (floor) => `Floor ${floor} is not loaded; use Load more replies first.`,
+  resizeList: 'Resize topic list',
+  listWidthPixels: (shown) => `Topic list, ${shown} pixels`,
+  resetListWidth: 'Drag to resize. Double-click to reset.'
 }
 
 export type { Words }

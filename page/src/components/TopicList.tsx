@@ -1,6 +1,9 @@
+import type { ComponentChildren } from 'preact'
+import { useEffect, useRef, useState } from 'preact/hooks'
 import type { Channel, CommunityId, CommunityInfo, Topic } from '../../../src/community'
 import type { Words } from '../dictionary'
 import type { PageHost } from '../host'
+import { clampListWidth, LIST_WIDTH_DEFAULT, LIST_WIDTH_MIN, LIST_WIDTH_STEP, listWidthLimit } from '../list-width'
 import { relativeTime } from '../relative-time'
 import { readKey } from '../saved-state'
 import type { ListState } from '../use-reader'
@@ -10,7 +13,7 @@ import { RefreshIcon } from './icons'
 // The sidebar, as Antumi's list of conversations: the community and channel on top, then one row a
 // topic, its title on one line and what it is under it. The open one floats as a card; one read
 // before is quieter.
-export function TopicList({ communities, community, channel, list, openTopic, read, words, locale, now, onCommunity, onChannel, onOpen, onRefresh }: {
+export function TopicList({ communities, community, channel, list, openTopic, read, words, locale, now, listWidth, onListWidth, onCommunity, onChannel, onOpen, onRefresh }: {
   communities: CommunityInfo[] | null
   community: CommunityInfo | null
   channel: Channel | null
@@ -20,6 +23,8 @@ export function TopicList({ communities, community, channel, list, openTopic, re
   words: Words
   locale: PageHost['locale']
   now: number
+  listWidth: number
+  onListWidth: (width: number) => void
   onCommunity: (id: CommunityId) => void
   onChannel: (id: string) => void
   onOpen: (topic: Topic) => void
@@ -27,7 +32,7 @@ export function TopicList({ communities, community, channel, list, openTopic, re
 }) {
   const topics = list.topics ?? []
   return (
-    <aside className="sidebar">
+    <ListFrame saved={listWidth} words={words} onWidth={onListWidth}>
       <div className="sidebar-head">
         {/* One forum alone has nothing to switch to. */}
         {communities && communities.length > 1 && (
@@ -80,6 +85,77 @@ export function TopicList({ communities, community, channel, list, openTopic, re
         {list.error !== null && !list.topics && <p className="topic-list-note">{words.listFailed}</p>}
         {list.topics && topics.length === 0 && <p className="topic-list-note">{words.empty}</p>}
       </div>
+    </ListFrame>
+  )
+}
+
+// The list's right edge, dragged between the limits in list-width.ts. A double-click puts it back.
+function ListFrame({ saved, words, onWidth, children }: { saved: number, words: Words, onWidth: (width: number) => void, children: ComponentChildren }) {
+  const aside = useRef<HTMLElement>(null)
+  const drag = useRef<number | null>(null)
+  const grab = useRef(0)
+  const [pane, setPane] = useState(() => window.innerWidth)
+  const [dragged, setDragged] = useState<number | null>(null)
+  const shown = clampListWidth(dragged ?? saved, pane)
+  const limit = listWidthLimit(pane)
+  useEffect(() => {
+    const resize = () => setPane(window.innerWidth)
+    window.addEventListener('resize', resize)
+    return () => window.removeEventListener('resize', resize)
+  }, [])
+  const remember = (next: number) => {
+    drag.current = next
+    setDragged(next)
+  }
+  const commit = () => {
+    if (drag.current !== null) onWidth(drag.current)
+    drag.current = null
+    setDragged(null)
+    document.body.removeAttribute('data-resizing-list')
+  }
+  const offset = (clientX: number) => clientX - (aside.current?.getBoundingClientRect().left ?? 0)
+  return (
+    <aside ref={aside} className="sidebar" style={{ width: shown }}>
+      {children}
+      <div
+        className="sidebar-resizer"
+        data-dragging={dragged !== null}
+        role="separator"
+        aria-label={words.resizeList}
+        aria-orientation="vertical"
+        aria-valuemin={LIST_WIDTH_MIN}
+        aria-valuemax={limit}
+        aria-valuenow={shown}
+        aria-valuetext={words.listWidthPixels(shown)}
+        title={words.resetListWidth}
+        tabIndex={0}
+        onKeyDown={(event) => {
+          const next = event.key === 'ArrowLeft' ? shown - LIST_WIDTH_STEP
+            : event.key === 'ArrowRight' ? shown + LIST_WIDTH_STEP
+            : event.key === 'Home' ? LIST_WIDTH_MIN
+            : event.key === 'End' ? limit
+            : null
+          if (next === null) return
+          event.preventDefault()
+          onWidth(clampListWidth(next, window.innerWidth))
+        }}
+        onDblClick={() => onWidth(LIST_WIDTH_DEFAULT)}
+        onPointerDown={(event) => {
+          if (event.button !== 0) return
+          event.preventDefault()
+          event.currentTarget.setPointerCapture(event.pointerId)
+          grab.current = offset(event.clientX) - shown
+          remember(shown)
+          document.body.dataset.resizingList = ''
+        }}
+        onPointerMove={(event) => {
+          if (drag.current === null) return
+          remember(clampListWidth(offset(event.clientX) - grab.current, window.innerWidth))
+        }}
+        onPointerUp={commit}
+        onPointerCancel={commit}
+        onLostPointerCapture={commit}
+      />
     </aside>
   )
 }

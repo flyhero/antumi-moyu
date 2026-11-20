@@ -1,4 +1,5 @@
 import { ReplyTarget, type CommunityId } from '../../src/community'
+import { LIST_WIDTH_DEFAULT, readListWidth } from './list-width'
 
 export type Draft = { text: string; target: ReplyTarget | null; uncertain: boolean }
 export type ReadingPosition = { floor: number; page: number; offset: number }
@@ -14,6 +15,8 @@ export type SavedState = {
   // Pictures shown as they are, rather than folded to a chip.
   images: boolean
   disguiseAvatars: boolean
+  // The topic list's width, in pixels. The page clamps it again when the window is narrow.
+  listWidth: number
   // "<community>:<topic id>" -> the highest floor seen, oldest first.
   read: Record<string, number>
   drafts: Record<string, Draft>
@@ -22,7 +25,7 @@ export type SavedState = {
 
 export const READ_LIMIT = 200
 
-export const defaultState: SavedState = { community: 'linuxdo', channel: null, stream: true, images: false, disguiseAvatars: false, read: {}, drafts: {}, positions: {} }
+export const defaultState: SavedState = { community: 'linuxdo', channel: null, stream: true, images: false, disguiseAvatars: false, listWidth: LIST_WIDTH_DEFAULT, read: {}, drafts: {}, positions: {} }
 
 export function isCommunityId(value: unknown): value is CommunityId {
   return value === 'linuxdo' || value === 'v2ex'
@@ -91,6 +94,7 @@ export function readSavedState(value: unknown): SavedState {
     stream: typeof value.stream === 'boolean' ? value.stream : defaultState.stream,
     images: typeof value.images === 'boolean' ? value.images : defaultState.images,
     disguiseAvatars: typeof value.disguiseAvatars === 'boolean' ? value.disguiseAvatars : defaultState.disguiseAvatars,
+    listWidth: readListWidth(value.listWidth),
     read, drafts, positions
   }
 }
