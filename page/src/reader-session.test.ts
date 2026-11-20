@@ -6,6 +6,7 @@ import type { CommunityId, NotificationPage, ReplyResult, Thread, Topic } from '
 import { App } from './components/App'
 import type { PageHost } from './host'
 import { readSavedState } from './saved-state'
+import { focusCheckDelay } from './use-forum-session'
 import { builtinCovers, coverFor } from './title-disguise'
 
 const topic: Topic = { community: 'linuxdo', id: '42', title: 'A long topic', author: 'bob', avatar: null, channel: null, replies: 60, time: null, url: 'https://linux.do/t/topic/42' }
@@ -230,7 +231,19 @@ describe('reader sessions', () => {
     f.account(null)
     await mount(f.host)
     const pending = f.holdSession()
-    await act(() => { window.dispatchEvent(new Event('focus')) })
+    const now = Date.now()
+    vi.useFakeTimers()
+    vi.setSystemTime(now)
+    try {
+      await act(() => { vi.advanceTimersByTime(focusCheckDelay) })
+      await act(() => {
+        window.dispatchEvent(new Event('focus'))
+        vi.advanceTimersByTime(focusCheckDelay)
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+    expect(f.calls.mock.calls.filter(([method]) => method === 'session')).toHaveLength(2)
     expect(button('登录').disabled).toBe(false)
     expect(button('检查登录状态').textContent).toBe('检查登录状态')
     await click('登录')
@@ -371,13 +384,26 @@ describe('my notifications', () => {
     expect(f.calls.mock.calls.some(([method]) => method === 'notifications')).toBe(false)
   })
 
-  it('waits 3 minutes for V2EX and checks immediately when the window regains focus', async () => {
+  it('waits 3 minutes for V2EX and refreshes the session after focus settles', async () => {
     const timer = vi.spyOn(globalThis, 'setTimeout')
     const f = fixture(null, 'v2ex'); await mount(f.host)
     expect(f.calls.mock.calls.some(([method]) => method === 'notificationWatch')).toBe(false)
     expect(timer).toHaveBeenCalledWith(expect.any(Function), 180000)
+    timer.mockRestore()
     f.watch(8, false)
-    await act(() => { window.dispatchEvent(new Event('focus')) }); await settle(); await settle()
+    const now = Date.now()
+    vi.useFakeTimers()
+    vi.setSystemTime(now)
+    try {
+      await act(() => { vi.advanceTimersByTime(focusCheckDelay) })
+      await act(async () => {
+        window.dispatchEvent(new Event('focus'))
+        await vi.advanceTimersByTimeAsync(focusCheckDelay)
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+    await settle()
     expect(document.querySelector('.notification-badge')?.textContent).toBe('8')
     expect(f.calls.mock.calls.filter(([method]) => method === 'notificationWatch')).toHaveLength(0)
     expect(f.calls.mock.calls.filter(([method]) => method === 'session')).toHaveLength(2)
