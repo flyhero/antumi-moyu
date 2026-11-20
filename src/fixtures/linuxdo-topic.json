@@ -31,11 +31,19 @@
     "topic_id": 3192714,
     "hidden": false,
     "deleted_at": null,
-    "user_deleted": false
+    "user_deleted": false,
+    "user_id": 322478
    }
   ],
   "stream": [
    24894790
   ]
+ },
+ "user_id": 322478,
+ "details": {
+  "created_by": {
+   "id": 322478,
+   "username": "inm"
+  }
  }
 }

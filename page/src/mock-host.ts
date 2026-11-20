@@ -130,7 +130,7 @@ export function mockHost(): PageHost {
         const added = posted.get(key) ?? []
         const last = lastFloor(community, reply.id, added)
         const html = reply.content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')
-        const post: Post = { floor: last + 1, author: 'preview-reader', avatar: null, html: `<p>${html}</p>`, time: Date.now(), replyTo: reply.target?.floor ?? null, likes: 0 }
+        const post: Post = { floor: last + 1, author: 'preview-reader', avatar: null, html: `<p>${html}</p>`, time: Date.now(), replyTo: reply.target?.floor ?? null, likes: 0, byAuthor: false }
         posted.set(key, [...added, post])
         return JSON.parse(JSON.stringify({ state: 'sent', message: null, location: { floor: post.floor } }))
       }

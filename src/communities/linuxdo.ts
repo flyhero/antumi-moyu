@@ -62,7 +62,8 @@ const RawPost = z.object({
   actions_summary: z.array(z.object({ id: z.number(), count: z.number().optional() })).nullish(),
   hidden: z.boolean().nullish(),
   deleted_at: z.string().nullish(),
-  user_deleted: z.boolean().nullish()
+  user_deleted: z.boolean().nullish(),
+  user_id: z.number().int().nullish()
 })
 type RawPost = z.infer<typeof RawPost>
 
@@ -72,6 +73,9 @@ const RawThread = z.object({
   posts_count: z.number().int().nonnegative().nullish(),
   created_at: z.string().nullish(),
   last_posted_at: z.string().nullish(),
+  // Discourse's own topic-owner check uses this id, also published as details.created_by.id.
+  user_id: z.number().int().nullish(),
+  details: z.object({ created_by: z.object({ id: z.number().int(), username: z.string().nullish() }).nullish() }).nullish(),
   post_stream: z.object({ posts: z.array(RawPost), stream: z.array(z.number()).nullish() })
 })
 
@@ -98,7 +102,7 @@ function readable(raw: RawPost): boolean {
   return (raw.post_type ?? 1) === 1 && !raw.hidden && !raw.deleted_at && !raw.user_deleted
 }
 
-function toPost(raw: RawPost): Post {
+function toPost(raw: RawPost, authorId: number | null): Post {
   return {
     floor: raw.post_number,
     author: raw.username || raw.name || '',
@@ -106,7 +110,9 @@ function toPost(raw: RawPost): Post {
     html: fromCdn(absoluteLinks(raw.cooked ?? '', ORIGIN)),
     time: millis(raw.created_at),
     replyTo: raw.reply_to_post_number ?? null,
-    likes: likesOf(raw)
+    likes: likesOf(raw),
+    // A missing id is not a match: the same display name can belong to someone else.
+    byAuthor: authorId !== null && raw.user_id === authorId
   }
 }
 
@@ -162,8 +168,10 @@ export function linuxdo(get: Get = httpGet): Community {
 
       const visible = raw.post_stream.posts.filter(readable)
       const first = page === 1 ? visible.find((post) => post.post_number === 1) : undefined
-      const opening = first ? toPost(first) : null
-      const posts = visible.filter((post) => post !== first).map(toPost)
+      // Page 1 can fall back to the opening post's id; later pages only have the topic's id.
+      const authorId = raw.user_id ?? raw.details?.created_by?.id ?? first?.user_id ?? null
+      const opening = first ? { ...toPost(first, authorId), byAuthor: true } : null
+      const posts = visible.filter((post) => post !== first).map((post) => toPost(post, authorId))
 
       // Post numbers skip removed posts, so position comes from the stream of ids: more is whether
       // the last post this page loaded is short of the stream's end.
@@ -172,7 +180,7 @@ export function linuxdo(get: Get = httpGet): Community {
       const position = lastLoaded ? stream.indexOf(lastLoaded.id) + 1 : 0
       const more = position > 0 && position < stream.length
 
-      const author = opening?.author ?? ''
+      const author = opening?.author || raw.details?.created_by?.username || ''
       const topic: Topic = {
         community: 'linuxdo',
         id: String(raw.id),

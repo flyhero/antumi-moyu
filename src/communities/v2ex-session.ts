@@ -11,6 +11,11 @@ const timeOf = (value: string | undefined): number | null => {
   const time = value ? Date.parse(value) : NaN
   return Number.isFinite(time) ? time : null
 }
+// The avatar's data-uid is the account id. ".badge.op" is that comparison already rendered.
+const accountId = (value: string | undefined): number | null => {
+  const id = Number(value)
+  return Number.isInteger(id) && id > 0 ? id : null
+}
 
 export function v2exSession(get: Get): Community {
   const info = v2ex(get).info
@@ -56,6 +61,7 @@ export function v2exSession(get: Get): Community {
       const title = header.find('h1').text().trim()
       if (!title) throw new Error('帖子不存在、需要登录，或当前账号无权查看')
       const author = header.find('a[href^="/member/"]').filter((_index, item) => $(item).text().trim() !== '').first().text().trim()
+      const authorId = accountId(header.find('img.avatar').first().attr('data-uid'))
       const avatar = absoluteUrl(header.find('img.avatar').attr('src'), ORIGIN)
       const topic: Topic = { community: 'v2ex', id, title, author, avatar, channel: header.find('a[href^="/go/"]').first().text().trim() || null,
         replies: null, time: timeOf(header.find('.ago').first().attr('title')), url: `${ORIGIN}/t/${id}` }
@@ -64,17 +70,19 @@ export function v2exSession(get: Get): Community {
         const row = $(item)
         const floor = Number(row.find('.no').first().text().trim())
         if (!Number.isInteger(floor) || floor < 1) return
+        const replyId = accountId(row.find('img.avatar').first().attr('data-uid'))
         posts.push({ id: row.attr('id')?.slice(2), floor, author: row.find('a.dark[href^="/member/"]').first().text().trim(),
           avatar: absoluteUrl(row.find('img.avatar').first().attr('src'), ORIGIN),
           html: absoluteLinks(row.find('.reply_content').first().html() ?? '', ORIGIN),
-          time: timeOf(row.find('.ago').first().attr('title')), replyTo: null, likes: null })
+          time: timeOf(row.find('.ago').first().attr('title')), replyTo: null, likes: null,
+          byAuthor: authorId !== null && replyId !== null ? replyId === authorId : row.find('.badge.op').length > 0 })
       })
       const authors = new Map(posts.map((post) => [post.floor, post.author]))
       for (const post of posts) post.replyTo = v2exReplyTarget(post.html, post.floor, authors)
       const more = $('a.page_normal').toArray().some((item) => Number($(item).text().trim()) > page)
       const opening: Post | null = page === 1 ? { floor: 0, author, avatar,
         html: absoluteLinks([$('.topic_content').first().html() ?? '', ...$('#Main .subtle .topic_content').map((_i, item) => $(item).html() ?? '').get()].join('\n'), ORIGIN),
-        time: topic.time, replyTo: null, likes: null } : null
+        time: topic.time, replyTo: null, likes: null, byAuthor: true } : null
       return { topic, opening, posts, page, more }
     }
   }

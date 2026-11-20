@@ -39,7 +39,9 @@ export const Post = z.object({
   time: z.number().nullable(),
   // The floor it answers, when the forum says.
   replyTo: z.number().int().nonnegative().nullable(),
-  likes: z.number().int().nonnegative().nullable()
+  likes: z.number().int().nonnegative().nullable(),
+  // Whether the person who started the topic wrote it. The forums compare account ids, not names.
+  byAuthor: z.boolean()
 })
 export type Post = z.infer<typeof Post>
 

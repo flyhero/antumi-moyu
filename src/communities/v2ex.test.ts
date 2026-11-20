@@ -99,7 +99,8 @@ describe('v2ex thread', () => {
       html: '<p>11.17，我的生日，知道的人不多，没人记得，难过。求一句生日祝福。</p>\n',
       time: 1794898813000,
       replyTo: null,
-      likes: null
+      likes: null,
+      byAuthor: true
     })
     expect(thread.posts).toHaveLength(30)
     expect(thread.posts.map((post) => post.floor)).toEqual(Array.from({ length: 30 }, (_, index) => index + 1))
@@ -108,8 +109,8 @@ describe('v2ex thread', () => {
 
   it('points a reply at the nearest earlier reply by the name it mentions, with absolute links', async () => {
     const thread = await v2ex(real().get).thread('1257707', 1, signal)
-    expect(thread.posts[0]).toMatchObject({ author: 'leehomyhh', replyTo: null, html: '可以，生日快乐！' })
-    expect(thread.posts[1]).toMatchObject({ author: 'Tarrency', replyTo: 1 })
+    expect(thread.posts[0]).toMatchObject({ author: 'leehomyhh', replyTo: null, html: '可以，生日快乐！', byAuthor: false })
+    expect(thread.posts[1]).toMatchObject({ author: 'Tarrency', replyTo: 1, byAuthor: true })
     expect(thread.posts[1]?.html).toContain('href="https://www.v2ex.com/member/leehomyhh"')
     expect(thread.posts[1]?.avatar).toBe('https://cdn.v2ex.com/avatar/878a/98cb/601093_large.png?m=1732081345')
   })
@@ -145,6 +146,17 @@ describe('v2ex thread', () => {
   it('says the topic does not exist when the array is empty or the status is 404', async () => {
     await expect(v2ex(site({ 'show.json?id=': '[]' }).get).thread('9', 1, signal)).rejects.toThrow('帖子不存在')
     await expect(v2ex(answer('', 404)).thread('9', 1, signal)).rejects.toThrow('帖子不存在')
+  })
+
+  it('marks a reply by member id even when the displayed name matches', async () => {
+    const topic = JSON.stringify([{ id: 5, title: 'T', url: 'https://www.v2ex.com/t/5', member: { id: 7, username: 'same' }, content_rendered: '<p>hi</p>' }])
+    const replies = [
+      { member_id: 7, member: { id: 7, username: 'same' }, content_rendered: 'mine', created: 1 },
+      { member_id: 8, member: { id: 8, username: 'same' }, content_rendered: 'not mine', created: 1 }
+    ]
+    const { get } = site({ 'show.json?id=5': topic, 'replies/show.json': JSON.stringify(replies) })
+    const thread = await v2ex(get).thread('5', 1, signal)
+    expect(thread.posts.map((post) => post.byAuthor)).toEqual([true, false])
   })
 
   it('keeps floors right around a reply it cannot read', async () => {

@@ -36,7 +36,8 @@
     "topic_id": 1,
     "hidden": false,
     "deleted_at": null,
-    "user_deleted": false
+    "user_deleted": false,
+    "user_id": 20022
    },
    {
     "id": 3601036,
@@ -59,7 +60,8 @@
     "topic_id": 1,
     "hidden": false,
     "deleted_at": null,
-    "user_deleted": false
+    "user_deleted": false,
+    "user_id": 20023
    },
    {
     "id": 3611173,
@@ -82,7 +84,8 @@
     "topic_id": 1,
     "hidden": false,
     "deleted_at": null,
-    "user_deleted": false
+    "user_deleted": false,
+    "user_id": 10024
    },
    {
     "id": 3672517,
@@ -105,7 +108,8 @@
     "topic_id": 1,
     "hidden": false,
     "deleted_at": null,
-    "user_deleted": false
+    "user_deleted": false,
+    "user_id": 20025
    },
    {
     "id": 4225532,
@@ -128,7 +132,8 @@
     "topic_id": 1,
     "hidden": false,
     "deleted_at": null,
-    "user_deleted": false
+    "user_deleted": false,
+    "user_id": 20026
    },
    {
     "id": 4485459,
@@ -151,7 +156,8 @@
     "topic_id": 1,
     "hidden": false,
     "deleted_at": null,
-    "user_deleted": false
+    "user_deleted": false,
+    "user_id": 20027
    },
    {
     "id": 4892563,
@@ -174,7 +180,8 @@
     "topic_id": 1,
     "hidden": false,
     "deleted_at": null,
-    "user_deleted": false
+    "user_deleted": false,
+    "user_id": 20028
    },
    {
     "id": 5282950,
@@ -197,7 +204,8 @@
     "topic_id": 1,
     "hidden": false,
     "deleted_at": null,
-    "user_deleted": false
+    "user_deleted": false,
+    "user_id": 20029
    },
    {
     "id": 5449742,
@@ -220,7 +228,8 @@
     "topic_id": 1,
     "hidden": false,
     "deleted_at": null,
-    "user_deleted": false
+    "user_deleted": false,
+    "user_id": 20030
    },
    {
     "id": 5492615,
@@ -243,7 +252,8 @@
     "topic_id": 1,
     "hidden": false,
     "deleted_at": null,
-    "user_deleted": false
+    "user_deleted": false,
+    "user_id": 20031
    },
    {
     "id": 6345461,
@@ -266,7 +276,8 @@
     "topic_id": 1,
     "hidden": false,
     "deleted_at": null,
-    "user_deleted": false
+    "user_deleted": false,
+    "user_id": 20032
    },
    {
     "id": 6548605,
@@ -289,7 +300,8 @@
     "topic_id": 1,
     "hidden": false,
     "deleted_at": null,
-    "user_deleted": false
+    "user_deleted": false,
+    "user_id": 20033
    },
    {
     "id": 6564268,
@@ -312,7 +324,8 @@
     "topic_id": 1,
     "hidden": false,
     "deleted_at": null,
-    "user_deleted": false
+    "user_deleted": false,
+    "user_id": 20034
    },
    {
     "id": 6712112,
@@ -335,7 +348,8 @@
     "topic_id": 1,
     "hidden": false,
     "deleted_at": null,
-    "user_deleted": false
+    "user_deleted": false,
+    "user_id": 20035
    },
    {
     "id": 6801591,
@@ -358,7 +372,8 @@
     "topic_id": 1,
     "hidden": false,
     "deleted_at": null,
-    "user_deleted": false
+    "user_deleted": false,
+    "user_id": 20036
    },
    {
     "id": 7093267,
@@ -381,7 +396,8 @@
     "topic_id": 1,
     "hidden": false,
     "deleted_at": null,
-    "user_deleted": false
+    "user_deleted": false,
+    "user_id": 20037
    },
    {
     "id": 7298190,
@@ -404,7 +420,8 @@
     "topic_id": 1,
     "hidden": false,
     "deleted_at": null,
-    "user_deleted": false
+    "user_deleted": false,
+    "user_id": 20038
    },
    {
     "id": 7400018,
@@ -427,7 +444,8 @@
     "topic_id": 1,
     "hidden": false,
     "deleted_at": null,
-    "user_deleted": false
+    "user_deleted": false,
+    "user_id": 20039
    },
    {
     "id": 7972508,
@@ -450,7 +468,8 @@
     "topic_id": 1,
     "hidden": false,
     "deleted_at": null,
-    "user_deleted": false
+    "user_deleted": false,
+    "user_id": 20040
    },
    {
     "id": 8678993,
@@ -473,7 +492,8 @@
     "topic_id": 1,
     "hidden": false,
     "deleted_at": null,
-    "user_deleted": false
+    "user_deleted": false,
+    "user_id": 20041
    }
   ],
   "stream": [
@@ -536,5 +556,12 @@
    18228184,
    23765923
   ]
+ },
+ "user_id": 10024,
+ "details": {
+  "created_by": {
+   "id": 10024,
+   "username": "Nginx"
+  }
  }
 }

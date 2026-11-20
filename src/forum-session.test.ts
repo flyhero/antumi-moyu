@@ -124,6 +124,12 @@ describe('forum sign-in and reply', () => {
     expect(h.requests).toHaveLength(0)
   })
 
+  it('marks a signed-in reply as the topic author by avatar id, and by the site badge when the id is missing', async () => {
+    const html = `${account}<div id="Main"><div class="header"><h1>Topic</h1><img class="avatar" data-uid="7" alt="author"><a href="/member/author">author</a></div><div class="topic_content">Opening</div><div class="cell" id="r_1"><span class="no">1</span><img class="avatar" data-uid="7" alt="author"><a class="dark" href="/member/same">same</a><div class="reply_content">Mine</div></div><div class="cell" id="r_2"><span class="no">2</span><img class="avatar" data-uid="8" alt="other"><a class="dark" href="/member/same">same</a><div class="reply_content">Other</div></div><div class="cell" id="r_3"><span class="no">3</span><a class="dark" href="/member/author">author</a><div class="badges"><div class="badge op">OP</div></div><div class="reply_content">Badge</div></div></div>`
+    const result = await v2exSession(async () => response(html)).thread('42', 1, new AbortController().signal)
+    expect(result.posts.map((post) => post.byAuthor)).toEqual([true, false, true])
+  })
+
   it('reads logged-in V2EX HTML and preserves reply floors and paging', async () => {
     const get = vi.fn(async () => response(topic))
     const result = await v2exSession(get).thread('42', 1, new AbortController().signal)

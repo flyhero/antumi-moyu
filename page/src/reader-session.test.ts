@@ -12,7 +12,7 @@ const another = { ...topic, id: '43', title: 'Another topic' }
 const third = { ...topic, id: '44', title: 'Third topic' }
 function thread(one: Topic, page: number): Thread {
   return { topic: one, opening: null, page, more: page < 3,
-    posts: [page * 20 - 1, page * 20].map((floor) => ({ id: String(floor * 100), floor, author: 'bob', avatar: null, html: `<p>Reply ${floor}</p>`, time: null, replyTo: null, likes: 0 })) }
+    posts: [page * 20 - 1, page * 20].map((floor) => ({ id: String(floor * 100), floor, author: 'bob', avatar: null, html: `<p>Reply ${floor}</p>`, time: null, replyTo: null, likes: 0, byAuthor: false })) }
 }
 
 function fixture(initial: unknown = null, community: CommunityId = 'linuxdo') {

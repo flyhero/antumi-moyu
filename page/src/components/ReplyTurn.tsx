@@ -32,6 +32,7 @@ export function ReplyTurn({ post, page, community, disguiseAvatars, words, local
       <div className="chat-turn-head">
         <Avatar src={post.avatar} name={post.author} community={community} disguise={disguiseAvatars} />
         <span className="chat-turn-head-name">{post.author}</span>
+        {post.byAuthor && <span className="chat-turn-op" title={words.topicAuthorHint}>OP</span>}
         <span className="chat-turn-head-model">#{post.floor}</span>
         {post.time !== null && <span className="chat-message-time" title={absoluteTime(post.time)}>{relativeTime(post.time, now, locale)}</span>}
       </div>

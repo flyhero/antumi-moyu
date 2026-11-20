@@ -94,7 +94,7 @@ describe('linuxdo thread', () => {
     expect(thread.page).toBe(1)
     expect(thread.more).toBe(false)
     expect(thread.posts).toEqual([])
-    expect(thread.opening).toMatchObject({ floor: 1, author: 'inm', replyTo: null, likes: 0, time: Date.parse('2026-11-17T13:12:34.566Z') })
+    expect(thread.opening).toMatchObject({ floor: 1, author: 'inm', replyTo: null, likes: 0, byAuthor: true, time: Date.parse('2026-11-17T13:12:34.566Z') })
     expect(thread.opening?.avatar).toBe('https://cdn.ldstatic.com/user_avatar/linux.do/inm/96/2487393_2.png')
     expect(thread.topic).toEqual({
       community: 'linuxdo',
@@ -115,7 +115,7 @@ describe('linuxdo thread', () => {
     expect(urls).toEqual(['https://linux.do/t/topic/1.json?page=2'])
     expect(thread.opening).toBeNull()
     expect(thread.posts).toHaveLength(20)
-    expect(thread.posts[0]).toMatchObject({ floor: 22, author: 'prya', likes: 2, replyTo: null })
+    expect(thread.posts[0]).toMatchObject({ floor: 22, author: 'prya', likes: 2, replyTo: null, byAuthor: false })
     expect(thread.posts[0]?.avatar).toBe('https://cdn.ldstatic.com/letter_avatar/prya/96/6_449c533f586939b6e5f246632a46421f.png')
     // Emoji in the post come from the CDN too, and links into the forum stay on linux.do.
     expect(thread.posts.some((post) => post.html.includes('https://cdn.ldstatic.com/images/emoji/'))).toBe(true)
@@ -123,7 +123,8 @@ describe('linuxdo thread', () => {
     expect(thread.posts.map((p) => p.floor)).toEqual([...thread.posts.map((p) => p.floor)].sort((a, b) => a - b))
     // 58 posts in the stream, 40 seen so far.
     expect(thread.more).toBe(true)
-    expect(thread.topic).toMatchObject({ id: '1', author: '', replies: 57, url: 'https://linux.do/t/topic/1' })
+    expect(thread.posts.find((post) => post.floor === 24)?.byAuthor).toBe(true)
+    expect(thread.topic).toMatchObject({ id: '1', author: 'Nginx', replies: 57, url: 'https://linux.do/t/topic/1' })
   })
 
   it('is on its last page when the stream ends there', async () => {
@@ -133,7 +134,22 @@ describe('linuxdo thread', () => {
     expect(thread.more).toBe(false)
     expect(thread.opening?.floor).toBe(1)
     expect(thread.posts.map((p) => p.floor)).toEqual([2, 4])
-    expect(thread.posts[1]).toMatchObject({ replyTo: 2, likes: 5 })
+    expect(thread.posts[1]).toMatchObject({ replyTo: 2, likes: 5, byAuthor: false })
+  })
+
+  it('marks a reply by account id, including on a later page that has no opening post', async () => {
+    const owned = { user_id: 7, username: 'same' }
+    const other = { user_id: 8, username: 'same' }
+    const topic = { user_id: 7, details: { created_by: { id: 7, username: 'same' } } }
+    const first = topicJson([post(11, 1, owned), post(12, 2, other), post(13, 3, owned)], [11, 12, 13], topic)
+    const opened = await linuxdo(answer(first)).thread('7', 1, signal)
+    expect(opened.opening?.byAuthor).toBe(true)
+    expect(opened.posts.map((item) => item.byAuthor)).toEqual([false, true])
+    const later = topicJson([post(21, 21, owned), post(22, 22, other)], Array.from({ length: 40 }, (_, index) => index + 1), topic)
+    const page = await linuxdo(answer(later)).thread('7', 2, signal)
+    expect(page.opening).toBeNull()
+    expect(page.topic.author).toBe('same')
+    expect(page.posts.map((item) => item.byAuthor)).toEqual([true, false])
   })
 
   it('is not at its end when only part of the stream is loaded', async () => {

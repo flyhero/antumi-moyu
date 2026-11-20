@@ -26,6 +26,7 @@ const info: CommunityInfo = {
 }
 
 const RawMember = z.object({
+  id: z.number().int().nullish(),
   username: z.string(),
   avatar_large: z.string().nullish(),
   avatar_normal: z.string().nullish()
@@ -46,6 +47,7 @@ type RawTopic = z.infer<typeof RawTopic>
 
 const RawReply = z.object({
   member: RawMember.nullish(),
+  member_id: z.number().int().nullish(),
   content_rendered: z.string().nullish(),
   created: z.number().nullish()
 })
@@ -89,11 +91,12 @@ function topicOf(raw: RawTopic): Topic {
   }
 }
 
-function toReplies(raws: RawReply[]): Post[] {
+function toReplies(raws: RawReply[], authorId: number | null): Post[] {
   const authors = new Map(raws.map((raw, index) => [index + 1, raw.member?.username ?? '']))
   return raws.map((raw, index) => {
     const floor = index + 1
     const html = raw.content_rendered ?? ''
+    const id = raw.member_id ?? raw.member?.id ?? null
     return {
       floor,
       author: authors.get(floor) ?? '',
@@ -101,7 +104,9 @@ function toReplies(raws: RawReply[]): Post[] {
       html: absoluteLinks(html, ORIGIN),
       time: millis(raw.created),
       replyTo: v2exReplyTarget(html, floor, authors),
-      likes: null
+      likes: null,
+      // V2EX's "OP" badge is this same member-id check.
+      byAuthor: authorId !== null && id === authorId
     }
   })
 }
@@ -145,7 +150,8 @@ export function v2ex(get: Get = httpGet): Community {
         html: absoluteLinks(raw.content_rendered ?? '', ORIGIN),
         time: millis(raw.created),
         replyTo: null,
-        likes: null
+        likes: null,
+        byAuthor: true
       }
       const answers = checked(await get(`${ORIGIN}/api/replies/show.json?topic_id=${id}`, signal))
       if (!Array.isArray(answers)) throw new Error(UNREADABLE)
@@ -154,7 +160,7 @@ export function v2ex(get: Get = httpGet): Community {
         // A reply we cannot read still holds its floor, so the numbers after it stay right.
         return [reply.success ? reply.data : {}]
       })
-      return { topic, opening, posts: toReplies(replies), page, more: false }
+      return { topic, opening, posts: toReplies(replies, raw.member?.id ?? null), page, more: false }
     }
   }
 }

@@ -339,6 +339,17 @@ button { font: inherit; color: inherit; }
 .chat-avatar-agent[data-tone='2'] { background: var(--fill); }
 .chat-avatar-agent :is(.agent-mark-codex, .agent-mark-opencode, .agent-mark-pi, .agent-mark-zcode) { color: var(--mark-mono, CanvasText); }
 .chat-turn-head-name { color: var(--text-muted); white-space: nowrap; }
+.chat-turn-op {
+  flex-shrink: 0;
+  padding: 0 5px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 0.85em;
+  font-weight: 600;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+}
 .chat-turn-head-model { min-width: 0; overflow: hidden; color: var(--text-3); text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .chat-turn-head-model::before { content: '·'; margin-right: 8px; }
 
