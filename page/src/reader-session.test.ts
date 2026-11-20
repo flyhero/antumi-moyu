@@ -6,6 +6,7 @@ import type { CommunityId, NotificationPage, ReplyResult, Thread, Topic } from '
 import { App } from './components/App'
 import type { PageHost } from './host'
 import { readSavedState } from './saved-state'
+import { builtinCovers, coverFor } from './title-disguise'
 
 const topic: Topic = { community: 'linuxdo', id: '42', title: 'A long topic', author: 'bob', avatar: null, channel: null, replies: 60, time: null, url: 'https://linux.do/t/topic/42' }
 const another = { ...topic, id: '43', title: 'Another topic' }
@@ -22,6 +23,7 @@ function fixture(initial: unknown = null, community: CommunityId = 'linuxdo') {
   let rejectStorage = false
   let nextThreadFails = false
   let blockedReply: Promise<ReplyResult> | null = null
+  let blockedSession: Promise<{ username: string; unreadNotifications: number } | null> | null = null
   let blockedNotifications: Promise<NotificationPage> | null = null
   let notificationsFailAt: number | null = null
   let readFails = false
@@ -37,7 +39,7 @@ function fixture(initial: unknown = null, community: CommunityId = 'linuxdo') {
         url: 'https://linux.do/badges/7', target: null }] : [])]
   })
   const calls = vi.fn(async (method: string, params: unknown): Promise<unknown> => {
-    if (method === 'session') return account ? { username: account, unreadNotifications: unread } : null
+    if (method === 'session') return blockedSession ?? (account ? { username: account, unreadNotifications: unread } : null)
     if (method === 'login') return { opened: true }
     if (method === 'logout') { account = null; return { disconnected: true } }
     if (method === 'communities') return [{ id: community, name: 'linux.do', channels: [{ id: 'latest', name: '最新' }] }]
@@ -77,7 +79,9 @@ function fixture(initial: unknown = null, community: CommunityId = 'linuxdo') {
   return { host, calls, notificationPage, useNotificationPostId: () => { notificationUsesPostId = true }, failNotificationsAt: (page: number | null) => { notificationsFailAt = page }, failRead: (value: boolean) => { readFails = value },
     watch: (count: number, changed = true) => { unread = count; watchUnread = count; watchChanged = changed },
     holdNotifications: () => { const pending = { resolve: (_result: NotificationPage) => {} }; blockedNotifications = new Promise((resolve) => { pending.resolve = resolve }); return pending },
-    failNextThread: () => { nextThreadFails = true }, holdReply: () => { const pending = { resolve: (_result: ReplyResult) => {} }; blockedReply = new Promise((resolve) => { pending.resolve = resolve }); return pending }, saved: () => readSavedState(state), result: (next: ReplyResult) => { result = next }, account: (next: string | null) => { account = next }, rejectStorage: () => { rejectStorage = true } }
+    failNextThread: () => { nextThreadFails = true }, holdReply: () => { const pending = { resolve: (_result: ReplyResult) => {} }; blockedReply = new Promise((resolve) => { pending.resolve = resolve }); return pending },
+    holdSession: () => { const pending = { resolve: (_result: { username: string; unreadNotifications: number } | null) => {} }; blockedSession = new Promise((resolve) => { pending.resolve = resolve }); return pending },
+    saved: () => readSavedState(state), result: (next: ReplyResult) => { result = next }, account: (next: string | null) => { account = next }, rejectStorage: () => { rejectStorage = true } }
 }
 let root: HTMLDivElement | null = null
 async function settle() { await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)) }) }
@@ -219,6 +223,19 @@ describe('reader sessions', () => {
     await act(async () => pending.resolve({ state: 'sent', message: null })); await settle()
     expect(input().value).toBe('Pending across closing')
     expect(f.saved().drafts['linuxdo:alice:42']?.uncertain).toBe(true)
+  })
+
+  it('opens the browser on the first login click while a focus check is still running', async () => {
+    const f = fixture()
+    f.account(null)
+    await mount(f.host)
+    const pending = f.holdSession()
+    await act(() => { window.dispatchEvent(new Event('focus')) })
+    expect(button('登录').disabled).toBe(false)
+    expect(button('检查登录状态').textContent).toBe('检查登录状态')
+    await click('登录')
+    expect(f.calls.mock.calls.filter(([method]) => method === 'login')).toHaveLength(1)
+    await act(async () => { pending.resolve(null) }); await settle()
   })
 
   it('keeps the draft and offers sign-in when login expires', async () => {
@@ -469,11 +486,38 @@ describe('my notifications', () => {
     expect(f.host.leave).not.toHaveBeenCalled()
   })
 
-  it('gives the three reading switches the same hint, with no browser title', async () => {
+  it('gives the reading switches the same hint, with no browser title', async () => {
     const f = fixture(); await mount(f.host)
     const tips = [...document.querySelectorAll<HTMLButtonElement>('.reading-toggle')].map((button) => button.dataset.tooltip)
-    expect(tips).toEqual(['回复逐条打出：关', '显示图片：关', '头像伪装：关'])
+    expect(tips).toEqual(['回复逐条打出：关', '显示图片：关', '头像伪装：关', '标题伪装：关'])
     expect(document.querySelector('.reading-toggle[title]')).toBeNull()
+  })
+
+  it('shows a stand-in topic title until the row is pointed at, and keeps a custom list on its sentences', async () => {
+    const f = fixture(); await mount(f.host)
+    const row = () => document.querySelector<HTMLButtonElement>('[data-topic="linuxdo:42"]')
+    expect(row()?.querySelector('.title-cover')).toBeNull()
+    expect(row()?.textContent).toContain('A long topic')
+    await click('标题伪装：关')
+    expect(f.saved().disguiseTitles).toBe(true)
+    expect(row()?.querySelector('.title-cover')?.textContent).toBe(coverFor('linuxdo:42', builtinCovers('zh-CN')))
+    expect(row()?.getAttribute('aria-label')).toBe('A long topic')
+    expect(row()?.querySelector('.title-real')?.textContent).toBe('A long topic')
+    await click('编辑伪装标题')
+    const field = document.querySelector<HTMLTextAreaElement>('.title-cover-field')
+    if (!field) throw new Error('Missing title list')
+    await act(() => {
+      field.value = '看一下侧栏\n核一下发布'
+      field.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await act(() => { field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })) })
+    await settle()
+    const custom = f.saved().titleCovers
+    expect(custom).toEqual([{ id: 'u1', text: '看一下侧栏' }, { id: 'u2', text: '核一下发布' }])
+    expect(f.host.leave).not.toHaveBeenCalled()
+    for (const id of ['42', '43', '44']) {
+      expect(document.querySelector(`[data-topic="linuxdo:${id}"] .title-cover`)?.textContent).toBe(coverFor(`linuxdo:${id}`, custom))
+    }
   })
 
   it('resizes the topic list from its edge and restores the default on a double-click', async () => {

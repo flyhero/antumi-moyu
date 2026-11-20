@@ -16,7 +16,7 @@ describe('readSavedState', () => {
       images: 'yes',
       read: { 'v2ex:123': 4, 'linuxdo:9': -1, 'reddit:1': 3, 'v2ex:abc': 2, 'linuxdo:77': 1.5, 'linuxdo:78': 20 }
     })
-    expect(state).toEqual({ community: 'v2ex', channel: 'python', stream: false, images: false, disguiseAvatars: false, listWidth: 320, drafts: {}, positions: {}, read: { 'v2ex:123': 4, 'linuxdo:78': 20 } })
+    expect(state).toEqual({ community: 'v2ex', channel: 'python', stream: false, images: false, disguiseAvatars: false, disguiseTitles: false, titleCovers: [], listWidth: 320, drafts: {}, positions: {}, read: { 'v2ex:123': 4, 'linuxdo:78': 20 } })
   })
 
   it('round-trips avatar disguise and keeps older saved pages compatible', () => {
@@ -25,6 +25,15 @@ describe('readSavedState', () => {
     expect(saved.disguiseAvatars).toBe(true)
     expect(readSavedState({ images: true }).disguiseAvatars).toBe(false)
     expect(readSavedState({ disguiseAvatars: 'true' }).disguiseAvatars).toBe(false)
+  })
+
+  it('round-trips a custom title list and keeps an older save without one', () => {
+    const saved = readSavedState({ disguiseTitles: true, titleCovers: [{ id: 'u1', text: '看一下侧栏' }, { id: 'nope', text: '丢掉' }] })
+    expect(readSavedState(JSON.parse(JSON.stringify(saved)))).toEqual(saved)
+    expect(saved.disguiseTitles).toBe(true)
+    expect(saved.titleCovers).toEqual([{ id: 'u1', text: '看一下侧栏' }])
+    expect(readSavedState({ stream: false }).titleCovers).toEqual([])
+    expect(readSavedState({ disguiseTitles: 'yes' }).disguiseTitles).toBe(false)
   })
 
   it('rejects an unknown community and an empty or long channel', () => {

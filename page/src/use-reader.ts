@@ -3,6 +3,7 @@ import type { CommunityId, CommunityInfo, ReplyLocation, Thread, Topic } from '.
 import type { PageHost } from './host'
 import { callReader, errorMessage } from './reader-client'
 import { markRead, readKey, savePosition, scopeKey, type ReadingPosition } from './saved-state'
+import { sameTitleCovers, type TitleCover } from './title-disguise'
 import { TtlCache } from './ttl-cache'
 import type { PageState } from './use-page-state'
 import { refreshOnExpiry } from './refresh-on-expiry'
@@ -205,7 +206,9 @@ export function useReader(host: PageHost, store: PageState, onOpened: (thread: T
     selectChannel: (id: string) => setSaved((state) => ({ ...state, channel: id })),
     setStream: (stream: boolean) => setSaved((state) => ({ ...state, stream })),
     setImages: (images: boolean) => setSaved((state) => ({ ...state, images })),
-    setDisguiseAvatars: (disguiseAvatars: boolean) => setSaved((state) => ({ ...state, disguiseAvatars }))
+    setDisguiseAvatars: (disguiseAvatars: boolean) => setSaved((state) => ({ ...state, disguiseAvatars })),
+    setDisguiseTitles: (disguiseTitles: boolean) => setSaved((state) => ({ ...state, disguiseTitles })),
+    setTitleCovers: (titleCovers: TitleCover[]) => setSaved((state) => sameTitleCovers(state.titleCovers, titleCovers) ? state : { ...state, titleCovers })
   }
 }
 

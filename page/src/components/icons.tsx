@@ -71,6 +71,15 @@ export function HeartIcon() {
   return <svg {...stroked}><path d="M10 16s-6-3.6-6-8a3.2 3.2 0 0 1 6-1.6A3.2 3.2 0 0 1 16 8c0 4.4-6 8-6 8Z" /></svg>
 }
 
+// A page of stand-in titles. A slash means the list shows the forum's own titles.
+export function TitleDisguiseIcon({ active }: { active: boolean }) {
+  return <svg {...stroked}>
+    <path d="M6 3.5h5.5L15.5 7.5V16a1 1 0 0 1-1 1h-8.5a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1z" />
+    <path d="M11.5 3.5V7.5H15.5M7.5 11h5M7.5 14h3" />
+    {!active && <path d="m3.5 3.5 13 13" />}
+  </svg>
+}
+
 export function AvatarDisguiseIcon({ active }: { active: boolean }) {
   return <svg {...stroked}>
     <path d="M2.5 6.5C5.2 6.5 7.1 8 10 8s4.8-1.5 7.5-1.5v3.2c0 3-1.8 5.3-4.1 5.3-1.7 0-2.2-1.5-3.4-1.5S8.3 15 6.6 15c-2.3 0-4.1-2.3-4.1-5.3Z" />

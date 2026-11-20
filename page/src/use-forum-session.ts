@@ -10,11 +10,14 @@ export function useForumSession(host: PageHost) {
   const [error, setError] = useState<string | null>(null)
   const generation = useRef(0)
   const checking = useRef(false)
-  const check = useCallback(async () => {
+  // A check the page starts itself must not mark the buttons busy. The first click into the page
+  // focuses it, and that focus checks the session: if the buttons disable before mouseup, the click
+  // never arrives and the browser stays closed until the next one.
+  const check = useCallback(async (quiet = false) => {
     if (checking.current) return
     checking.current = true
     const ticket = generation.current
-    setBusy(true)
+    if (!quiet) setBusy(true)
     try {
       const next = ForumAccount.nullable().parse(await callReader(host, 'session', undefined))
       if (ticket !== generation.current) return
@@ -25,12 +28,12 @@ export function useForumSession(host: PageHost) {
       if (ticket === generation.current) setError(errorMessage(error))
     } finally {
       checking.current = false
-      if (ticket === generation.current) setBusy(false)
+      if (!quiet && ticket === generation.current) setBusy(false)
     }
   }, [host])
   useEffect(() => {
-    void check()
-    const focus = () => void check()
+    void check(true)
+    const focus = () => void check(true)
     window.addEventListener('focus', focus)
     return () => { generation.current += 1; window.removeEventListener('focus', focus) }
   }, [check])

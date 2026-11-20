@@ -1,17 +1,23 @@
 import type { Ref } from 'preact'
 import type { Words } from '../dictionary'
+import type { TitleCover } from '../title-disguise'
 import { AvatarDisguiseIcon, ImageDisplayIcon, ReplyIcon, CloseIcon, StreamingIcon } from './icons'
+import { TitleCoverEditor } from './TitleCoverEditor'
 import type { useReply } from '../use-reply'
 
-export function Composer({ words, stream, images, disguiseAvatars, input, onStream, onImages, onDisguiseAvatars, reply, canReply, storageError, onLogin, loginBusy, onViewPost }: {
+export function Composer({ words, stream, images, disguiseAvatars, disguiseTitles, titleCovers, input, onStream, onImages, onDisguiseAvatars, onDisguiseTitles, onTitleCovers, reply, canReply, storageError, onLogin, loginBusy, onViewPost }: {
   words: Words
   stream: boolean
   images: boolean
   disguiseAvatars: boolean
+  disguiseTitles: boolean
+  titleCovers: readonly TitleCover[]
   input: Ref<HTMLTextAreaElement>
   onStream: (stream: boolean) => void
   onImages: (images: boolean) => void
   onDisguiseAvatars: (disguise: boolean) => void
+  onDisguiseTitles: (disguise: boolean) => void
+  onTitleCovers: (covers: TitleCover[]) => void
   reply: ReturnType<typeof useReply>
   canReply: boolean
   storageError: boolean
@@ -65,6 +71,7 @@ export function Composer({ words, stream, images, disguiseAvatars, input, onStre
             <button type="button" className="chat-picker reading-toggle" aria-label={words.avatars(disguiseAvatars)} data-tooltip={words.avatars(disguiseAvatars)} aria-pressed={disguiseAvatars} onClick={() => onDisguiseAvatars(!disguiseAvatars)}>
               <AvatarDisguiseIcon active={disguiseAvatars} />
             </button>
+            <TitleCoverEditor words={words} disguiseTitles={disguiseTitles} covers={titleCovers} onDisguiseTitles={onDisguiseTitles} onChange={onTitleCovers} />
           </div>
           <span className="reply-hint muted">{words.replyHint(newlineKey)}</span>
           <button type="button" className="button reply-send" disabled={!canReply || reply.sending || reply.uncertain || reply.cooling || !reply.text.trim()} onClick={() => void reply.send()}>{reply.sending ? words.sendingReply : reply.cooling ? words.replyCooling : words.sendReply}</button>

@@ -6,6 +6,7 @@ import type { PageHost } from '../host'
 import { clampListWidth, LIST_WIDTH_DEFAULT, LIST_WIDTH_MIN, LIST_WIDTH_STEP, listWidthLimit } from '../list-width'
 import { relativeTime } from '../relative-time'
 import { readKey } from '../saved-state'
+import { coverFor, type TitleCover } from '../title-disguise'
 import type { ListState } from '../use-reader'
 import { ChannelPicker } from './ChannelPicker'
 import { RefreshIcon } from './icons'
@@ -13,7 +14,7 @@ import { RefreshIcon } from './icons'
 // The sidebar, as Antumi's list of conversations: the community and channel on top, then one row a
 // topic, its title on one line and what it is under it. The open one floats as a card; one read
 // before is quieter.
-export function TopicList({ communities, community, channel, list, openTopic, read, words, locale, now, listWidth, onListWidth, onCommunity, onChannel, onOpen, onRefresh }: {
+export function TopicList({ communities, community, channel, list, openTopic, read, words, locale, now, listWidth, disguiseTitles, titleCovers, onListWidth, onCommunity, onChannel, onOpen, onRefresh }: {
   communities: CommunityInfo[] | null
   community: CommunityInfo | null
   channel: Channel | null
@@ -24,6 +25,8 @@ export function TopicList({ communities, community, channel, list, openTopic, re
   locale: PageHost['locale']
   now: number
   listWidth: number
+  disguiseTitles: boolean
+  titleCovers: readonly TitleCover[]
   onListWidth: (width: number) => void
   onCommunity: (id: CommunityId) => void
   onChannel: (id: string) => void
@@ -62,6 +65,7 @@ export function TopicList({ communities, community, channel, list, openTopic, re
           {topics.map((topic) => {
             const current = openTopic !== null && openTopic.id === topic.id && openTopic.community === topic.community
             const meta = [topic.channel, topic.replies === null ? null : words.replies(topic.replies), topic.time === null ? null : relativeTime(topic.time, now, locale)]
+            const cover = disguiseTitles ? coverFor(readKey(topic.community, topic.id), titleCovers) : null
             return (
               <li key={`${topic.community}:${topic.id}`}>
                 <button
@@ -70,11 +74,16 @@ export function TopicList({ communities, community, channel, list, openTopic, re
                   data-topic={`${topic.community}:${topic.id}`}
                   aria-current={current || undefined}
                   data-read={read[readKey(topic.community, topic.id)] !== undefined || undefined}
+                  data-title-cover={cover !== null || undefined}
+                  aria-label={cover !== null ? topic.title : undefined}
                   title={topic.title}
                   onClick={() => onOpen(topic)}
                 >
                   <span className="conversation-status" data-glyph="idle" aria-hidden="true" />
-                  <span className="task-row-title">{topic.title}</span>
+                  <span className="task-row-title">
+                    {cover !== null && <span className="title-cover">{cover}</span>}
+                    <span className="title-real">{topic.title}</span>
+                  </span>
                   <span className="task-row-meta">{meta.filter((part) => part !== null).join(' · ')}</span>
                 </button>
               </li>
