@@ -676,6 +676,29 @@ body[data-resizing-list] { cursor: col-resize; user-select: none; }
 .chat-input::placeholder { color: var(--text-3); }
 .chat-options { display: flex; align-items: center; gap: 2px; min-height: 28px; padding: 0 6px 6px; }
 .chat-reading-options { display: flex; align-items: center; flex-shrink: 0; gap: 2px; }
+/* One hint for the three switches, above the button, as soon as the pointer is there.
+   The browser's own title waits, and the wait is different for each. */
+.reading-toggle[data-tooltip] { position: relative; }
+.reading-toggle[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  width: max-content;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--text);
+  color: var(--bg);
+  font-size: var(--chat-font-small);
+  font-weight: 400;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+}
+.reading-toggle[data-tooltip]:hover::after,
+.reading-toggle[data-tooltip]:focus-visible::after { opacity: 1; }
 .chat-input.reply-input { min-height: 64px; }
 
 @media (prefers-reduced-motion: reduce) {

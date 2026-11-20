@@ -173,7 +173,7 @@ describe('reader sessions', () => {
   it('saves drafts and targets immediately and restores them after a full remount', async () => {
     const f = fixture()
     await mount(f.host); await openTopic(); await click('回复 #19 @bob'); await type('Saved across closing the page')
-    await click('显示图片')
+    await click('显示图片：关')
     expect(f.saved().drafts['linuxdo:alice:42']).toEqual({ text: 'Saved across closing the page', target: { floor: 19, author: 'bob' }, uncertain: false })
     expect(f.saved().images).toBe(true)
     await unmount(); await mount(f.host); await openTopic()
@@ -467,6 +467,13 @@ describe('my notifications', () => {
     expect(panel()).toBeNull()
     expect(document.activeElement).toBe(document.querySelector('.notification-bell'))
     expect(f.host.leave).not.toHaveBeenCalled()
+  })
+
+  it('gives the three reading switches the same hint, with no browser title', async () => {
+    const f = fixture(); await mount(f.host)
+    const tips = [...document.querySelectorAll<HTMLButtonElement>('.reading-toggle')].map((button) => button.dataset.tooltip)
+    expect(tips).toEqual(['回复逐条打出：关', '显示图片：关', '头像伪装：关'])
+    expect(document.querySelector('.reading-toggle[title]')).toBeNull()
   })
 
   it('resizes the topic list from its edge and restores the default on a double-click', async () => {

@@ -13,9 +13,11 @@ export function EnterIcon() {
   return <svg {...stroked}><path d="M15.5 4.5v5a2.5 2.5 0 0 1-2.5 2.5H4.5M8 8.5 4.5 12 8 15.5" /></svg>
 }
 
+// Lines being typed, with the caret still on the last one. A slash means replies arrive all at once.
 export function StreamingIcon({ active }: { active: boolean }) {
   return <svg {...stroked}>
-    <path d="M3 5h10M3 10h7M3 15h8M14 9l3 3-3 3" />
+    <path d="M3 5h9M3 10h12M3 15h6" />
+    <path d="M11 13.2v3.6" />
     {!active && <path d="m3.5 3.5 13 13" />}
   </svg>
 }

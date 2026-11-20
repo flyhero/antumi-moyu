@@ -56,13 +56,13 @@ export function Composer({ words, stream, images, disguiseAvatars, input, onStre
           }} />
         <div className="chat-options">
           <div className="chat-reading-options" role="group" aria-label={words.readingOptions}>
-            <button type="button" className="chat-picker reading-toggle" aria-label={words.streaming} title={words.stream(stream)} aria-pressed={stream} onClick={() => onStream(!stream)}>
+            <button type="button" className="chat-picker reading-toggle" aria-label={words.stream(stream)} data-tooltip={words.stream(stream)} aria-pressed={stream} onClick={() => onStream(!stream)}>
               <StreamingIcon active={stream} />
             </button>
-            <button type="button" className="chat-picker reading-toggle" aria-label={words.showImages} title={words.images(images)} aria-pressed={images} onClick={() => onImages(!images)}>
+            <button type="button" className="chat-picker reading-toggle" aria-label={words.images(images)} data-tooltip={words.images(images)} aria-pressed={images} onClick={() => onImages(!images)}>
               <ImageDisplayIcon active={images} />
             </button>
-            <button type="button" className="chat-picker reading-toggle" aria-label={words.avatarDisguise} title={words.avatars(disguiseAvatars)} aria-pressed={disguiseAvatars} onClick={() => onDisguiseAvatars(!disguiseAvatars)}>
+            <button type="button" className="chat-picker reading-toggle" aria-label={words.avatars(disguiseAvatars)} data-tooltip={words.avatars(disguiseAvatars)} aria-pressed={disguiseAvatars} onClick={() => onDisguiseAvatars(!disguiseAvatars)}>
               <AvatarDisguiseIcon active={disguiseAvatars} />
             </button>
           </div>
