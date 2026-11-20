@@ -117,7 +117,8 @@ body[data-resizing-list] { cursor: col-resize; user-select: none; }
 .sidebar-section { display: flex; align-items: center; gap: 6px; min-height: 28px; padding-left: 12px; }
 .sidebar-section-label { font-size: var(--chat-font-small); font-weight: 600; color: var(--text-muted); }
 .count { font-size: var(--chat-font-small); color: var(--text-3); font-variant-numeric: tabular-nums; }
-.sidebar-section > .list-refresh { margin-left: auto; flex-shrink: 0; width: 28px; height: 28px; }
+.sidebar-section > .title-cover-anchor { margin-left: auto; }
+.sidebar-section > .list-refresh { flex-shrink: 0; width: 28px; height: 28px; }
 .sidebar-section > .list-refresh svg { width: 16px; height: 16px; }
 .list-refresh[aria-busy="true"] svg { animation: spin 0.8s linear infinite; }
 
@@ -713,6 +714,9 @@ body[data-resizing-list] { cursor: col-resize; user-select: none; }
 .title-cover-field::placeholder { color: var(--text-3); }
 .title-cover-field:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .title-cover-anchor[data-open] .chat-picker[data-tooltip]::after { content: none; }
+/* In the sidebar's header the editor and the hint open downward, aligned to the right edge. */
+.sidebar .title-cover-editor { top: calc(100% + 6px); right: 0; bottom: auto; left: auto; }
+.sidebar .chat-picker[data-tooltip]::after { top: calc(100% + 6px); right: 0; bottom: auto; left: auto; }
 /* One hint for the reading switches, above the button, as soon as the pointer is there.
    The browser's own title waits, and the wait is different for each. */
 .chat-picker[data-tooltip] { position: relative; }

@@ -10,11 +10,12 @@ import { coverFor, type TitleCover } from '../title-disguise'
 import type { ListState } from '../use-reader'
 import { ChannelPicker } from './ChannelPicker'
 import { RefreshIcon } from './icons'
+import { TitleCoverEditor } from './TitleCoverEditor'
 
 // The sidebar, as Antumi's list of conversations: the community and channel on top, then one row a
 // topic, its title on one line and what it is under it. The open one floats as a card; one read
 // before is quieter.
-export function TopicList({ communities, community, channel, list, openTopic, read, words, locale, now, listWidth, disguiseTitles, titleCovers, onListWidth, onCommunity, onChannel, onOpen, onRefresh }: {
+export function TopicList({ communities, community, channel, list, openTopic, read, words, locale, now, listWidth, disguiseTitles, titleCovers, savedTitleCovers, onDisguiseTitles, onTitleCovers, onListWidth, onCommunity, onChannel, onOpen, onRefresh }: {
   communities: CommunityInfo[] | null
   community: CommunityInfo | null
   channel: Channel | null
@@ -26,7 +27,12 @@ export function TopicList({ communities, community, channel, list, openTopic, re
   now: number
   listWidth: number
   disguiseTitles: boolean
+  /** The covers shown on the list: the built-in ones, or the user's own when there are any. */
   titleCovers: readonly TitleCover[]
+  /** Only the user's own covers, as the editor shows and saves them. */
+  savedTitleCovers: readonly TitleCover[]
+  onDisguiseTitles: (disguise: boolean) => void
+  onTitleCovers: (covers: TitleCover[]) => void
   onListWidth: (width: number) => void
   onCommunity: (id: CommunityId) => void
   onChannel: (id: string) => void
@@ -48,6 +54,7 @@ export function TopicList({ communities, community, channel, list, openTopic, re
         <div className="sidebar-section">
           <span className="sidebar-section-label">{words.conversations}</span>
           {list.topics && <span className="count">{topics.length}</span>}
+          <TitleCoverEditor words={words} disguiseTitles={disguiseTitles} covers={savedTitleCovers} onDisguiseTitles={onDisguiseTitles} onChange={onTitleCovers} />
           <button
             type="button"
             className="tool-button list-refresh"
@@ -99,10 +106,14 @@ export function TopicList({ communities, community, channel, list, openTopic, re
 }
 
 // The list's right edge, dragged between the limits in list-width.ts. A double-click puts it back.
+// The list's right edge, dragged between the limits in list-width.ts. A double-click puts it back.
+// The drag listens on the window, not the handle: the handle is only 9px, and pointer capture is
+// unreliable inside Antumi's sandboxed frame, so moving off the handle must not end the drag.
 function ListFrame({ saved, words, onWidth, children }: { saved: number, words: Words, onWidth: (width: number) => void, children: ComponentChildren }) {
   const aside = useRef<HTMLElement>(null)
-  const drag = useRef<number | null>(null)
-  const grab = useRef(0)
+  const drag = useRef<{ grab: number; width: number } | null>(null)
+  const onWidthRef = useRef(onWidth)
+  onWidthRef.current = onWidth
   const [pane, setPane] = useState(() => window.innerWidth)
   const [dragged, setDragged] = useState<number | null>(null)
   const shown = clampListWidth(dragged ?? saved, pane)
@@ -112,16 +123,29 @@ function ListFrame({ saved, words, onWidth, children }: { saved: number, words: 
     window.addEventListener('resize', resize)
     return () => window.removeEventListener('resize', resize)
   }, [])
-  const remember = (next: number) => {
-    drag.current = next
-    setDragged(next)
-  }
-  const commit = () => {
-    if (drag.current !== null) onWidth(drag.current)
-    drag.current = null
-    setDragged(null)
-    document.body.removeAttribute('data-resizing-list')
-  }
+  useEffect(() => {
+    const move = (event: PointerEvent) => {
+      if (!drag.current) return
+      const left = aside.current?.getBoundingClientRect().left ?? 0
+      const width = clampListWidth(event.clientX - left - drag.current.grab, window.innerWidth)
+      drag.current.width = width
+      setDragged(width)
+    }
+    const end = () => {
+      if (drag.current) onWidthRef.current(drag.current.width)
+      drag.current = null
+      setDragged(null)
+      document.body.removeAttribute('data-resizing-list')
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', end)
+    window.addEventListener('pointercancel', end)
+    return () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', end)
+      window.removeEventListener('pointercancel', end)
+    }
+  }, [])
   const offset = (clientX: number) => clientX - (aside.current?.getBoundingClientRect().left ?? 0)
   return (
     <aside ref={aside} className="sidebar" style={{ width: shown }}>
@@ -152,18 +176,10 @@ function ListFrame({ saved, words, onWidth, children }: { saved: number, words: 
         onPointerDown={(event) => {
           if (event.button !== 0) return
           event.preventDefault()
-          event.currentTarget.setPointerCapture(event.pointerId)
-          grab.current = offset(event.clientX) - shown
-          remember(shown)
+          drag.current = { grab: offset(event.clientX) - shown, width: shown }
+          setDragged(shown)
           document.body.dataset.resizingList = ''
         }}
-        onPointerMove={(event) => {
-          if (drag.current === null) return
-          remember(clampListWidth(offset(event.clientX) - grab.current, window.innerWidth))
-        }}
-        onPointerUp={commit}
-        onPointerCancel={commit}
-        onLostPointerCapture={commit}
       />
     </aside>
   )

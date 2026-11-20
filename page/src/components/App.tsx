@@ -191,6 +191,9 @@ export function App({ host }: { host: PageHost }) {
         listWidth={store.state.listWidth}
         disguiseTitles={reader.saved.disguiseTitles}
         titleCovers={coversFor(host.locale, reader.saved.titleCovers)}
+        savedTitleCovers={reader.saved.titleCovers}
+        onDisguiseTitles={reader.setDisguiseTitles}
+        onTitleCovers={reader.setTitleCovers}
         onListWidth={(width) => store.update((state) => state.listWidth === width ? state : { ...state, listWidth: width })}
       />
       <main className="chat-view">
@@ -233,14 +236,10 @@ export function App({ host }: { host: PageHost }) {
           stream={reader.saved.stream}
           images={reader.saved.images}
           disguiseAvatars={reader.saved.disguiseAvatars}
-          disguiseTitles={reader.saved.disguiseTitles}
-          titleCovers={reader.saved.titleCovers}
           input={input}
           onStream={reader.setStream}
           onImages={reader.setImages}
           onDisguiseAvatars={reader.setDisguiseAvatars}
-          onDisguiseTitles={reader.setDisguiseTitles}
-          onTitleCovers={reader.setTitleCovers}
           reply={reply}
           storageError={store.storageError}
           onLogin={() => void session.login()}

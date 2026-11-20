@@ -515,7 +515,7 @@ describe('my notifications', () => {
   it('gives the reading switches the same hint, with no browser title', async () => {
     const f = fixture(); await mount(f.host)
     const tips = [...document.querySelectorAll<HTMLButtonElement>('.reading-toggle')].map((button) => button.dataset.tooltip)
-    expect(tips).toEqual(['回复逐条打出：关', '显示图片：关', '头像伪装：关', '标题伪装：关'])
+    expect(tips).toEqual(['标题伪装：关', '回复逐条打出：关', '显示图片：关', '头像伪装：关'])
     expect(document.querySelector('.reading-toggle[title]')).toBeNull()
   })
 
