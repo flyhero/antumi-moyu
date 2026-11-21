@@ -60,7 +60,7 @@ function millis(value: string | null | undefined): number | null {
   return Number.isNaN(time) ? null : time
 }
 
-const RawPost = z.object({
+export const RawPost = z.object({
   id: z.number(),
   post_number: z.number().int(),
   username: z.string().nullish(),
@@ -71,7 +71,8 @@ const RawPost = z.object({
   post_type: z.number().nullish(),
   reply_to_post_number: z.number().int().nonnegative().nullish(),
   reaction_users_count: z.number().int().nonnegative().nullish(),
-  actions_summary: z.array(z.object({ id: z.number(), count: z.number().optional() })).nullish(),
+  actions_summary: z.array(z.object({ id: z.number(), count: z.number().optional(), acted: z.boolean().optional(), can_act: z.boolean().optional() })).nullish(),
+  current_user_used_main_reaction: z.boolean().nullish(),
   hidden: z.boolean().nullish(),
   deleted_at: z.string().nullish(),
   user_deleted: z.boolean().nullish(),
@@ -92,9 +93,17 @@ const RawThread = z.object({
 })
 
 // Discourse's id 2 is the like; reaction_users_count counts every reaction and is what its page shows.
-function likesOf(raw: RawPost): number {
+export function likesOf(raw: RawPost): number {
   if (typeof raw.reaction_users_count === 'number') return raw.reaction_users_count
   return raw.actions_summary?.find((action) => action.id === 2)?.count ?? 0
+}
+
+// Only a signed-in reader's copy says either: the reactions plugin's flag, or core's like action.
+export function likedOf(raw: RawPost): boolean | undefined {
+  const like = raw.actions_summary?.find((action) => action.id === 2)
+  if (typeof raw.current_user_used_main_reaction === 'boolean') return raw.current_user_used_main_reaction || like?.acted === true
+  if (like?.acted !== undefined || like?.can_act !== undefined) return like.acted === true
+  return undefined
 }
 
 // linux.do serves its avatars and emoji with Cross-Origin-Resource-Policy: same-origin, so a page
@@ -115,7 +124,9 @@ function readable(raw: RawPost): boolean {
 }
 
 function toPost(raw: RawPost, authorId: number | null): Post {
+  const liked = likedOf(raw)
   return {
+    id: String(raw.id),
     floor: raw.post_number,
     author: raw.username || raw.name || '',
     avatar: avatarOf(raw),
@@ -123,6 +134,7 @@ function toPost(raw: RawPost, authorId: number | null): Post {
     time: millis(raw.created_at),
     replyTo: raw.reply_to_post_number ?? null,
     likes: likesOf(raw),
+    ...(liked !== undefined ? { liked } : {}),
     // A missing id is not a match: the same display name can belong to someone else.
     byAuthor: authorId !== null && raw.user_id === authorId
   }

@@ -5,6 +5,7 @@ import { v2ex } from './communities/v2ex.js'
 import { v2exSession } from './communities/v2ex-session.js'
 import type { CommunityId } from './community.js'
 import { ListParams, ThreadParams } from './community.js'
+import { likeOutcome } from './forum-like.js'
 import { forumAccount, replyOutcome, siteRequest } from './forum-session.js'
 import { forumNotifications, readForumNotification } from './forum-notifications.js'
 import { watchForumNotifications } from './notification-watch.js'
@@ -38,6 +39,7 @@ export function makeBrowserReader(community: CommunityId) {
     notificationRead: (params: unknown, context: PluginPageContext) => readForumNotification(community, params, context),
     notificationWatch: (params: unknown, context: PluginPageContext) => watchForumNotifications(community, params, context),
     reply: (params: unknown, context: PluginPageContext) => replyOutcome(community, params, context),
+    like: (params: unknown, context: PluginPageContext) => likeOutcome(community, params, context),
     list: (params: unknown, context: PluginPageContext) => {
       const input = ListParams.extend({ authenticated: z.boolean().default(false) }).parse(params)
       return (input.authenticated ? authenticated(context) : anonymous).list(input, context)

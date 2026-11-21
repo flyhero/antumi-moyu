@@ -67,8 +67,8 @@ export function CloseIcon() {
   return <svg {...stroked}><path d="m5.5 5.5 9 9m0-9-9 9" /></svg>
 }
 
-export function HeartIcon() {
-  return <svg {...stroked}><path d="M10 16s-6-3.6-6-8a3.2 3.2 0 0 1 6-1.6A3.2 3.2 0 0 1 16 8c0 4.4-6 8-6 8Z" /></svg>
+export function HeartIcon({ filled = false }: { filled?: boolean }) {
+  return <svg {...stroked} fill={filled ? 'currentColor' : 'none'}><path d="M10 16s-6-3.6-6-8a3.2 3.2 0 0 1 6-1.6A3.2 3.2 0 0 1 16 8c0 4.4-6 8-6 8Z" /></svg>
 }
 
 // A chat bubble with a title's two lines: a stand-in chat title. A slash means the list shows the forum's own titles.

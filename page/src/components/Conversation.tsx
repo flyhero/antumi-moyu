@@ -7,12 +7,13 @@ import type { Words } from '../dictionary'
 import type { PageHost } from '../host'
 import type { ThreadState } from '../use-reader'
 import { AssistantNotice, ChatNotice } from './ChatNotice'
+import { ChevronDownIcon } from './icons'
 import { OpeningMessage } from './OpeningMessage'
 import { ReplyTurn } from './ReplyTurn'
 import { WorkingLine } from './WorkingLine'
 
 // The thread as a conversation: the opening post as the user's message, each reply as a turn.
-export function Conversation({ thread, notice, failure, words, locale, now, showImages, disguiseAvatars, shown, onTyped, onRetry, onLoadMore, onJump, canReply, onReply, onLoadPrevious, positionKey, onPosition }: {
+export function Conversation({ thread, notice, failure, words, locale, now, showImages, disguiseAvatars, shown, onTyped, onRetry, onLoadMore, onJump, canReply, onReply, likes, onLoadPrevious, positionKey, onPosition }: {
   thread: ThreadState | null
   notice: string | null
   // What failed outside the thread (the communities, the list).
@@ -33,6 +34,7 @@ export function Conversation({ thread, notice, failure, words, locale, now, show
   onJump: (floor: number) => void
   canReply: boolean
   onReply: (post: Post) => void
+  likes: { view: (post: Post) => Post; likeable: (post: Post) => boolean; busy: (post: Post) => boolean; toggle: (post: Post) => void }
 }) {
   const list = useReadingPosition(positionKey, thread, shown !== null, onPosition)
   const said = useRef<HTMLDivElement>(null)
@@ -52,7 +54,11 @@ export function Conversation({ thread, notice, failure, words, locale, now, show
   return (
     <div ref={list} className="chat-list" data-restoring={thread?.focus ? true : undefined}>
       {!thread && <AssistantNotice intro={words.readingIntro} words={words} />}
-      {pages[0] && pages[0].page > 1 && <button type="button" className="button chat-more" disabled={thread?.loading !== null} onClick={onLoadPrevious}>{words.loadPrevious}</button>}
+      {pages[0] && pages[0].page > 1 && (
+        <div className="chat-more-row">
+          <button type="button" className="chat-more" data-up="" disabled={thread?.loading !== null} onClick={onLoadPrevious}><ChevronDownIcon />{words.loadPrevious}</button>
+        </div>
+      )}
       {pages.map((page, pageIndex) => {
         const posts = pageIndex === 0 && shown !== null ? page.posts.slice(0, shown) : page.posts
         return (
@@ -62,7 +68,7 @@ export function Conversation({ thread, notice, failure, words, locale, now, show
             {posts.map((post, index) => (
               <ReplyTurn
                 key={post.floor}
-                post={post}
+                post={likes.view(post)}
                 page={page.page}
                 community={page.topic.community}
                 disguiseAvatars={disguiseAvatars}
@@ -76,6 +82,9 @@ export function Conversation({ thread, notice, failure, words, locale, now, show
                 onJump={onJump}
                 canReply={canReply}
                 onReply={onReply}
+                canLike={likes.likeable(post)}
+                liking={likes.busy(post)}
+                onLike={likes.toggle}
               />
             ))}
           </Fragment>
@@ -86,7 +95,9 @@ export function Conversation({ thread, notice, failure, words, locale, now, show
       {thread?.error && <ChatNotice text={thread.error.message} words={words} onRetry={onRetry} />}
       {failure !== null && <ChatNotice text={failure} words={words} onRetry={onRetry} />}
       {!streaming && thread && thread.loading === null && !thread.error && last?.more && (
-        <button type="button" className="button chat-more" onClick={onLoadMore}>{words.loadMore}</button>
+        <div className="chat-more-row">
+          <button type="button" className="chat-more" onClick={onLoadMore}><ChevronDownIcon />{words.loadMore}</button>
+        </div>
       )}
       {notice && (
         <div ref={said} className="chat-said">

@@ -437,8 +437,29 @@ body[data-resizing-list] { cursor: col-resize; user-select: none; }
 .chat-comment-reply:hover:not(:disabled) { background: var(--fill); color: var(--text); }
 .chat-comment-reply:focus-visible { outline: 2px solid var(--focus); }
 .chat-comment-reply:disabled { cursor: default; opacity: 0.45; }
-.chat-turn-likes { display: inline-flex; align-items: center; gap: 4px; color: var(--text-3); font-size: var(--chat-font-small); font-variant-numeric: tabular-nums; }
-.chat-turn-likes svg { width: 12px; height: 12px; }
+.chat-turn-like {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  min-width: 24px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-3);
+  font-size: var(--chat-font-small);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.chat-turn-like svg { flex-shrink: 0; width: 13px; height: 13px; }
+.chat-turn-like:hover:not(:disabled) { background: var(--fill); color: var(--text); }
+.chat-turn-like:focus-visible { outline: 2px solid var(--focus); }
+.chat-turn-like:disabled { cursor: default; }
+.chat-turn-like[data-liked], .chat-turn-like[data-asking] { color: var(--danger); }
+.chat-turn-like[data-liked] svg { animation: chat-like-pop 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes chat-like-pop { 50% { transform: scale(1.25); } }
+@media (prefers-reduced-motion: reduce) { .chat-turn-like[data-liked] svg { animation: none; } }
 
 /* A reply's structure in type alone: headings a step over the text, markers and quotes a shade
    under it, rules and tables in hairlines. Colour is left to links. */
@@ -583,7 +604,32 @@ body[data-resizing-list] { cursor: col-resize; user-select: none; }
 .chat-notice-action { flex-shrink: 0; height: 26px; padding: 0 10px; }
 .chat-divider { display: flex; align-items: center; gap: 12px; color: var(--text-muted); font-size: var(--chat-font-small); }
 .chat-divider::before, .chat-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-.chat-more { align-self: center; }
+/* Load more: a quiet pill on a hairline, where the conversation goes on. */
+.chat-more-row { display: flex; align-items: center; gap: 12px; padding: 4px 0; }
+.chat-more-row::before, .chat-more-row::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.chat-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 14px 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: var(--chat-font-small);
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.chat-more svg { width: 14px; height: 14px; color: var(--text-3); transition: color 0.12s, transform 0.12s; }
+.chat-more[data-up] svg { transform: rotate(180deg); }
+.chat-more:hover:not(:disabled) { border-color: var(--border-2); background: var(--fill); color: var(--text); }
+.chat-more:hover:not(:disabled) svg { color: var(--text-muted); transform: translateY(1px); }
+.chat-more[data-up]:hover:not(:disabled) svg { transform: rotate(180deg) translateY(1px); }
+.chat-more:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.chat-more:disabled { cursor: default; opacity: 0.55; }
 
 /* The working line: what the assistant is at, and for how long. */
 .chat-working {

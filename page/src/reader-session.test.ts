@@ -14,7 +14,7 @@ const another = { ...topic, id: '43', title: 'Another topic' }
 const third = { ...topic, id: '44', title: 'Third topic' }
 function thread(one: Topic, page: number): Thread {
   return { topic: one, opening: null, page, more: page < 3,
-    posts: [page * 20 - 1, page * 20].map((floor) => ({ id: String(floor * 100), floor, author: 'bob', avatar: null, html: `<p>Reply ${floor}</p>`, time: null, replyTo: null, likes: 0, byAuthor: false })) }
+    posts: [page * 20 - 1, page * 20].map((floor) => ({ id: String(floor * 100), floor, author: 'bob', avatar: null, html: `<p>Reply ${floor}</p>`, time: null, replyTo: null, likes: 0, liked: false, byAuthor: false })) }
 }
 
 function fixture(initial: unknown = null, community: CommunityId = 'linuxdo') {
@@ -52,6 +52,10 @@ function fixture(initial: unknown = null, community: CommunityId = 'linuxdo') {
       return thread({ ...([topic, another, third].find((topic) => topic.id === input.id) ?? topic), community }, input.floor || input.tail ? 3 : input.page ?? 1)
     }
     if (method === 'reply') return blockedReply ?? result
+    if (method === 'like') {
+      const input = JSON.parse(JSON.stringify(params))
+      return input.post === '1900' ? { state: 'failed', failure: { kind: 'rejected', message: 'Like refused' } } : { state: 'done', liked: input.liked, likes: null }
+    }
     if (method === 'notifications') {
       const input = JSON.parse(JSON.stringify(params))
       if (blockedNotifications) { const blocked = blockedNotifications; blockedNotifications = null; return blocked }
@@ -284,6 +288,43 @@ describe('reader sessions', () => {
     expect(details.open).toBe(true)
     await act(() => { document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })) })
     expect(details.open).toBe(false)
+  })
+
+  it('likes a linux.do reply and takes the like back', async () => {
+    const f = fixture()
+    await mount(f.host); await openTopic()
+    await click('给 #20 @bob 点赞')
+    expect(button('取消点赞').getAttribute('aria-pressed')).toBe('true')
+    expect(button('取消点赞').textContent).toBe('1')
+    await click('取消点赞')
+    expect(f.calls.mock.calls.filter(([method]) => method === 'like')).toEqual([
+      ['like', { topic: '42', post: '2000', liked: true }], ['like', { topic: '42', post: '2000', liked: false }]
+    ])
+    expect(button('给 #20 @bob 点赞').textContent).toBe('')
+  })
+
+  it('asks before sending V2EX thanks, which cannot be taken back', async () => {
+    const f = fixture(null, 'v2ex')
+    await mount(f.host); await openTopic()
+    await click('感谢 #20 @bob：花费 10 个铜币，发出后不能撤回')
+    expect(f.calls.mock.calls.filter(([method]) => method === 'like')).toHaveLength(0)
+    await click('再点一次发送感谢')
+    expect(f.calls.mock.calls.filter(([method]) => method === 'like')).toEqual([['like', { topic: '42', post: '2000', liked: true }]])
+    expect(button('已感谢').disabled).toBe(true)
+  })
+
+  it('says why a like failed and keeps the heart as it was', async () => {
+    const f = fixture()
+    await mount(f.host); await openTopic()
+    await click('给 #19 @bob 点赞')
+    expect(document.body.textContent).toContain('Like refused')
+    expect(button('给 #19 @bob 点赞').getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('offers no like on one\'s own reply or while signed out', async () => {
+    const f = fixture(); f.account('bob')
+    await mount(f.host); await openTopic()
+    expect(document.querySelector('.chat-turn-like')).toBeNull()
   })
 
   it('preserves the current thread when a reply awaits moderation', async () => {

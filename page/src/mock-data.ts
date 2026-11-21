@@ -254,6 +254,7 @@ export function mockThread(community: CommunityId, id: string, page: number, now
   const { opening, replies } = threadParts(community, seed)
   const first = community === 'linuxdo' ? 2 : 1
   const post = (reply: Reply, index: number): Post => ({
+    id: String(90_000 + first + index),
     floor: first + index,
     author: reply.author,
     avatar: avatars[reply.author] ?? null,
@@ -261,6 +262,7 @@ export function mockThread(community: CommunityId, id: string, page: number, now
     time: now - (replies.length - index) * 7 * 60_000,
     replyTo: reply.replyTo ?? null,
     likes: reply.likes ?? 0,
+    liked: false,
     byAuthor: reply.author === seed.author
   })
   const all = [...replies.map(post), ...added]

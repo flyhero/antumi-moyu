@@ -16,6 +16,7 @@ import { SessionBar } from './SessionBar'
 import { useForumSession } from '../use-forum-session'
 import { coversFor } from '../title-disguise'
 import { usePageState } from '../use-page-state'
+import { useLikes } from '../use-likes'
 import { useReply } from '../use-reply'
 
 function isTyping(target: EventTarget | null): boolean {
@@ -44,6 +45,7 @@ export function App({ host }: { host: PageHost }) {
     if (result.state === 'sent') reader.showSent(topic, result.location)
     reader.refreshList()
   })
+  const likes = useLikes(host, thread?.topic ?? null, session.account?.username ?? null, (text) => setNotice(text))
   const notifications = useNotifications(host, reader.community?.id ?? null, session.account)
   const streaming = stream.shown !== null
 
@@ -230,6 +232,7 @@ export function App({ host }: { host: PageHost }) {
             stream.finish()
             input.current?.focus()
           }}
+          likes={likes}
         />
         <Composer
           words={words}

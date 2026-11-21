@@ -71,10 +71,15 @@ export function v2exSession(get: Get): Community {
         const floor = Number(row.find('.no').first().text().trim())
         if (!Number.isInteger(floor) || floor < 1) return
         const replyId = accountId(row.find('img.avatar').first().attr('data-uid'))
+        // One's own replies have no thank area; a thanked one says so in its class.
+        const thanks = row.find('.thank_area').first()
+        const hearts = Number(row.find('.small.fade').filter((_i, item) => $(item).find('img[src*="heart"]').length > 0).first().text().trim())
         posts.push({ id: row.attr('id')?.slice(2), floor, author: row.find('a.dark[href^="/member/"]').first().text().trim(),
           avatar: absoluteUrl(row.find('img.avatar').first().attr('src'), ORIGIN),
           html: absoluteLinks(row.find('.reply_content').first().html() ?? '', ORIGIN),
-          time: timeOf(row.find('.ago').first().attr('title')), replyTo: null, likes: null,
+          time: timeOf(row.find('.ago').first().attr('title')), replyTo: null,
+          likes: Number.isInteger(hearts) && hearts > 0 ? hearts : 0,
+          ...(thanks.length ? { liked: thanks.hasClass('thanked') } : {}),
           byAuthor: authorId !== null && replyId !== null ? replyId === authorId : row.find('.badge.op').length > 0 })
       })
       const authors = new Map(posts.map((post) => [post.floor, post.author]))

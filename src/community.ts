@@ -29,8 +29,9 @@ export const Topic = z.object({
 export type Topic = z.infer<typeof Topic>
 
 export const Post = z.object({
-  // The number the forum shows beside the post; 1 is the first reply on V2EX and the opening post on linux.do.
+  // The forum's own id for it, which a like addresses; absent where the forum's reading endpoint does not say.
   id: z.string().regex(/^\d{1,16}$/).optional(),
+  // The number the forum shows beside the post; 1 is the first reply on V2EX and the opening post on linux.do.
   floor: z.number().int().nonnegative(),
   author: z.string(),
   avatar: z.string().nullable(),
@@ -40,6 +41,8 @@ export const Post = z.object({
   // The floor it answers, when the forum says.
   replyTo: z.number().int().nonnegative().nullable(),
   likes: z.number().int().nonnegative().nullable(),
+  // Whether the signed-in reader has liked (V2EX: thanked) it; absent when reading anonymously or when it cannot be liked, such as one's own post.
+  liked: z.boolean().optional(),
   // Whether the person who started the topic wrote it. The forums compare account ids, not names.
   byAuthor: z.boolean()
 })
@@ -83,6 +86,18 @@ export const ReplyResult = z.discriminatedUnion('state', [
   z.object({ state: z.literal('failed'), failure: ReplyFailure })
 ])
 export type ReplyResult = z.infer<typeof ReplyResult>
+
+// The id is the post's (linux.do) or the reply's (V2EX), not its floor; V2EX also needs the topic for a fresh once.
+export const LikeParams = z.object({
+  topic: z.string().regex(/^\d{1,12}$/),
+  post: z.string().regex(/^\d{1,16}$/),
+  liked: z.boolean()
+})
+export const LikeResult = z.discriminatedUnion('state', [
+  z.object({ state: z.literal('done'), liked: z.boolean(), likes: z.number().int().nonnegative().nullable() }),
+  z.object({ state: z.literal('failed'), failure: ReplyFailure })
+])
+export type LikeResult = z.infer<typeof LikeResult>
 
 export const ForumNotification = z.object({
   id: z.string().regex(/^\d{1,16}$/),
@@ -145,6 +160,7 @@ export type ReaderMethods = {
   notificationRead: { params: z.input<typeof NotificationReadParams>; result: { read: boolean } }
   notificationWatch: { params: z.input<typeof NotificationWatchParams>; result: NotificationUpdate }
   reply: { params: z.input<typeof ReplyParams>; result: ReplyResult }
+  like: { params: z.input<typeof LikeParams>; result: LikeResult }
   communities: { params: undefined; result: CommunityInfo[] }
   list: { params: z.input<typeof ListParams>; result: Topic[] }
   thread: { params: z.input<typeof ThreadParams>; result: Thread }
