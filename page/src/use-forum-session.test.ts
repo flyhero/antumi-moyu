@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { h, render } from 'preact'
 import { act } from 'preact/test-utils'
+import { clearForumCooldown, noteForumRefusal } from './forum-cooldown'
 import type { PageHost } from './host'
 import { focusCheckDelay, useForumSession } from './use-forum-session'
 
@@ -26,8 +27,8 @@ function Probe({ host }: { host: PageHost }) {
 
 describe('forum session focus check', () => {
   let root: HTMLDivElement
-  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(0) })
-  afterEach(() => { if (root) render(null, root); vi.useRealTimers() })
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(0); clearForumCooldown() })
+  afterEach(() => { if (root) render(null, root); clearForumCooldown(); vi.useRealTimers() })
 
   async function mount() {
     const built = harness()
@@ -78,6 +79,17 @@ describe('forum session focus check', () => {
     await act(() => { window.dispatchEvent(new Event('focus')) })
     await act(() => { render(null, root) })
     await act(() => { vi.advanceTimersByTime(focusCheckDelay) })
+    expect(sessions(calls)).toHaveLength(1)
+  })
+
+  it('skips quiet focus checks while the forum cooldown is active', async () => {
+    const { calls } = await mount()
+    await act(() => { vi.advanceTimersByTime(focusCheckDelay) })
+    noteForumRefusal('请求过于频繁，请 30 秒后再试', Date.now())
+    await act(() => {
+      window.dispatchEvent(new Event('focus'))
+      vi.advanceTimersByTime(focusCheckDelay)
+    })
     expect(sessions(calls)).toHaveLength(1)
   })
 })

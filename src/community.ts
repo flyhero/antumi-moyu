@@ -105,13 +105,20 @@ export const NotificationPage = z.object({
 export type NotificationPage = z.infer<typeof NotificationPage>
 export const NotificationParams = z.object({ account: z.string().min(1).max(100), page: z.number().int().min(1).max(1000).default(1) })
 export const NotificationReadParams = z.object({ account: z.string().min(1).max(100), id: z.string().regex(/^\d{1,16}$/) })
+// What linux.do's home page says about its notification stream. The page keeps it in memory only
+// and hands it back, so a poll does not fetch the home page again; it is never saved.
+export const NotificationBootstrap = z.object({
+  origin: z.enum(['https://linux.do', 'https://ping.linux.do']), path: z.string().regex(/^\/[\w./-]{0,100}$/).refine((path) => !path.includes('..')),
+  sharedKey: z.string().min(1).max(512).optional(), interval: z.number().int().min(1000).max(180_000)
+})
+export type NotificationBootstrap = z.infer<typeof NotificationBootstrap>
 export const NotificationWatchParams = z.object({
   account: z.string().min(1).max(100), clientId: z.string().regex(/^[a-f0-9]{32}$/),
-  cursor: z.number().int().min(-1).optional(), userId: z.number().int().positive().optional()
+  cursor: z.number().int().min(-1).optional(), userId: z.number().int().positive().optional(), bootstrap: NotificationBootstrap.optional()
 })
 export const NotificationUpdate = z.discriminatedUnion('state', [
   z.object({ state: z.literal('ok'), account: ForumAccount, cursor: z.number().int().min(-1).optional(), changed: z.boolean(),
-    interval: z.number().int().min(100).max(180_000) }),
+    interval: z.number().int().min(100).max(180_000), bootstrap: NotificationBootstrap.optional() }),
   z.object({ state: z.enum(['retry', 'login']), message: z.string(), retryAfter: z.number().int().min(1).max(86400).optional() })
 ])
 export type NotificationUpdate = z.infer<typeof NotificationUpdate>

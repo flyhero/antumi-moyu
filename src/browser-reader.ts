@@ -11,6 +11,12 @@ import { watchForumNotifications } from './notification-watch.js'
 import { makeReader } from './reader.js'
 import type { Get } from './http.js'
 
+function acceptFor(path: string): string {
+  if (path.includes('.json')) return 'application/json'
+  if (path.includes('.rss')) return 'application/rss+xml, application/atom+xml;q=0.9, */*;q=0.8'
+  return '*/*'
+}
+
 export function makeBrowserReader(community: CommunityId) {
   const anonymous = makeReader([community === 'linuxdo' ? linuxdo() : v2ex()])
   const authenticated = (context: PluginPageContext) => {
@@ -18,7 +24,8 @@ export function makeBrowserReader(community: CommunityId) {
       const origin = community === 'linuxdo' ? 'https://linux.do' : 'https://www.v2ex.com'
       const parsed = new URL(url)
       if (parsed.origin !== origin) throw new Error('不能读取其他站点')
-      return siteRequest(context, parsed.pathname + parsed.search)
+      const path = parsed.pathname + parsed.search
+      return siteRequest(context, path, { headers: { accept: acceptFor(path) } })
     }
     return makeReader([community === 'linuxdo' ? linuxdo(get) : v2exSession(get)])
   }

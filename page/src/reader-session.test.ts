@@ -32,6 +32,7 @@ function fixture(initial: unknown = null, community: CommunityId = 'linuxdo') {
   let notificationUsesPostId = false
   let watchUnread = unread
   let watchChanged = false
+  let streamStale = false
   const notificationPage = (username: string, page = 1): NotificationPage => ({
     account: username, page, more: page === 1, unread: community === 'v2ex' ? 0 : unread, seenId: 90, readOnOpen: community === 'v2ex',
     items: [{ id: page === 1 ? '101' : '103', kind: 'reply', actor: 'bob', title: `For ${username}`, excerpt: 'A notification reply', time: null, timeLabel: null,
@@ -60,9 +61,11 @@ function fixture(initial: unknown = null, community: CommunityId = 'linuxdo') {
     }
     if (method === 'notificationWatch') {
       const input = JSON.parse(JSON.stringify(params))
+      if (community === 'linuxdo' && streamStale && input.bootstrap) return { state: 'login', message: 'Stream address is stale' }
       return account ? { state: 'ok', account: { username: account, unreadNotifications: watchUnread, ...(community === 'linuxdo' ? { userId: 7 } : {}) },
         ...(community === 'linuxdo' ? { cursor: typeof input.cursor === 'number' ? input.cursor + (watchChanged ? 1 : 0) : 90 } : {}),
-        changed: watchChanged, interval: community === 'linuxdo' ? 180000 : 180000 } : { state: 'login', message: 'Signed out' }
+        changed: watchChanged, interval: community === 'linuxdo' ? 180000 : 180000,
+        ...(community === 'linuxdo' && !input.bootstrap ? { bootstrap: { origin: 'https://ping.linux.do', path: '/', sharedKey: 'shared', interval: 180000 } } : {}) } : { state: 'login', message: 'Signed out' }
     }
     if (method === 'notificationRead') {
       if (readFails) throw new Error('Read state failed')
@@ -78,6 +81,7 @@ function fixture(initial: unknown = null, community: CommunityId = 'linuxdo') {
     theme: { scheme: 'light', variables: {} }, locale: 'zh-CN', onTheme: () => () => {}, open: vi.fn(), leave: vi.fn()
   }
   return { host, calls, notificationPage, useNotificationPostId: () => { notificationUsesPostId = true }, failNotificationsAt: (page: number | null) => { notificationsFailAt = page }, failRead: (value: boolean) => { readFails = value },
+    staleStream: (value: boolean) => { streamStale = value },
     watch: (count: number, changed = true) => { unread = count; watchUnread = count; watchChanged = changed },
     holdNotifications: () => { const pending = { resolve: (_result: NotificationPage) => {} }; blockedNotifications = new Promise((resolve) => { pending.resolve = resolve }); return pending },
     failNextThread: () => { nextThreadFails = true }, holdReply: () => { const pending = { resolve: (_result: ReplyResult) => {} }; blockedReply = new Promise((resolve) => { pending.resolve = resolve }); return pending },
@@ -382,6 +386,43 @@ describe('my notifications', () => {
     expect(f.calls.mock.calls.filter(([method]) => method === 'notificationWatch')).toHaveLength(1)
     expect(f.calls.mock.calls.filter(([method]) => method === 'session')).toHaveLength(1)
     expect(f.calls.mock.calls.some(([method]) => method === 'notifications')).toBe(false)
+  })
+
+  function watches(f: ReturnType<typeof fixture>) {
+    return f.calls.mock.calls.filter(([method]) => method === 'notificationWatch').map(([, params]) => JSON.parse(JSON.stringify(params)))
+  }
+
+  it('hands the stream address back after the first poll, and does not stack polls on a burst of focus', async () => {
+    const f = fixture(); f.watch(7, false); await mount(f.host)
+    expect(watches(f)).toHaveLength(1)
+    expect(watches(f)[0]).not.toHaveProperty('bootstrap')
+    await act(() => {
+      window.dispatchEvent(new Event('focus'))
+      document.dispatchEvent(new Event('visibilitychange'))
+      window.dispatchEvent(new Event('focus'))
+    })
+    await settle(); await settle()
+    expect(watches(f)).toHaveLength(2)
+    expect(watches(f)[1]).toMatchObject({ cursor: 90, userId: 7, bootstrap: { origin: 'https://ping.linux.do', path: '/', sharedKey: 'shared' } })
+    expect(JSON.stringify(readSavedState(f.host.state))).not.toContain('shared')
+  })
+
+  it('reads the stream address again after a refusal, and focus does not cut a failure wait short', async () => {
+    const timer = vi.spyOn(globalThis, 'setTimeout')
+    const f = fixture(); f.watch(7, false); await mount(f.host)
+    f.staleStream(true)
+    await act(() => { window.dispatchEvent(new Event('focus')) }); await settle(); await settle()
+    expect(watches(f)).toHaveLength(2)
+    expect(watches(f)[1]).toHaveProperty('bootstrap')
+    await act(() => { window.dispatchEvent(new Event('focus')) }); await settle()
+    expect(watches(f)).toHaveLength(2)
+    f.staleStream(false)
+    const retry = timer.mock.calls.filter(([, delay]) => delay === 2000).at(-1)?.[0]
+    if (typeof retry !== 'function') throw new Error('No backoff timer')
+    await act(async () => { retry() }); await settle(); await settle()
+    expect(watches(f)).toHaveLength(3)
+    expect(watches(f)[2]).toMatchObject({ cursor: 90 })
+    expect(watches(f)[2]).not.toHaveProperty('bootstrap')
   })
 
   it('waits 3 minutes for V2EX and refreshes the session after focus settles', async () => {

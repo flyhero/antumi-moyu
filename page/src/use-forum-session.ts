@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { ForumAccount } from '../../src/community'
+import { forumCoolingDown, noteForumRefusal } from './forum-cooldown'
 import type { PageHost } from './host'
 import { callReader, errorMessage } from './reader-client'
 
@@ -22,6 +23,8 @@ export function useForumSession(host: PageHost) {
   const check = useCallback(async (quiet = false) => {
     cancelFocusCheck()
     if (checking.current) return
+    // Quiet focus checks must not keep hitting a forum that just asked us to wait.
+    if (quiet && forumCoolingDown()) return
     checking.current = true
     checkedAt.current = Date.now()
     const ticket = generation.current
@@ -33,7 +36,11 @@ export function useForumSession(host: PageHost) {
       if (next) setAwaiting(false)
       setError(null)
     } catch (error) {
-      if (ticket === generation.current) setError(errorMessage(error))
+      if (ticket === generation.current) {
+        const message = errorMessage(error)
+        noteForumRefusal(message)
+        setError(message)
+      }
     } finally {
       checking.current = false
       if (!quiet && ticket === generation.current) setBusy(false)

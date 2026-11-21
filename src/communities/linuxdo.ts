@@ -34,10 +34,22 @@ const info: CommunityInfo = {
   ]
 }
 
-// Cloudflare's challenge arrives as a 403 or 429, or as a 200 page, with this header or title.
+function retryAfterSeconds(headers: Record<string, string>): number | undefined {
+  const value = headers['retry-after']
+  const seconds = value && /^\d+$/.test(value) ? Number(value) : value ? Math.ceil((Date.parse(value) - Date.now()) / 1000) : NaN
+  return Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds, 86400) : undefined
+}
+
+// Cloudflare's challenge arrives as a 403 or a 200 page with this header or title. A plain 429 is
+// the forum's own rate limit, including when the built-in browser session is already logged in.
 function checked(response: HttpResponse, missing?: string): string {
-  const challenged = 'cf-mitigated' in response.headers || response.body.includes('Just a moment') || response.status === 403 || response.status === 429
+  const challenged = 'cf-mitigated' in response.headers || response.body.includes('Just a moment')
   if (challenged) throw new Error('linux.do 暂时拦住了请求，过一会儿再试')
+  if (response.status === 429) {
+    const retry = retryAfterSeconds(response.headers)
+    throw new Error(retry !== undefined ? `请求过于频繁，请 ${retry} 秒后再试` : '请求过于频繁，请稍后再试')
+  }
+  if (response.status === 403) throw new Error('linux.do 暂时拦住了请求，过一会儿再试')
   if (response.status === 404 && missing) throw new Error(missing)
   if (response.status !== 200) throw new Error(`linux.do 返回了 ${response.status}`)
   return response.body

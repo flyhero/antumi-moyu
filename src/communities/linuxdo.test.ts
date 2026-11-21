@@ -224,9 +224,13 @@ describe('linuxdo errors', () => {
   it('names the Cloudflare challenge on a list and on a thread', async () => {
     await expect(linuxdo(answer(challenge, 403, { 'cf-mitigated': 'challenge' })).list('latest', signal)).rejects.toThrow(blocked)
     await expect(linuxdo(answer(challenge, 403)).thread('1', 1, signal)).rejects.toThrow(blocked)
-    await expect(linuxdo(answer('', 429)).thread('1', 1, signal)).rejects.toThrow(blocked)
     await expect(linuxdo(answer('', 200, { 'cf-mitigated': 'challenge' })).list('latest', signal)).rejects.toThrow(blocked)
     await expect(linuxdo(answer(challenge, 200)).list('latest', signal)).rejects.toThrow(blocked)
+  })
+
+  it('names a plain 429 as a rate limit, including Retry-After', async () => {
+    await expect(linuxdo(answer('', 429)).thread('1', 1, signal)).rejects.toThrow('请求过于频繁，请稍后再试')
+    await expect(linuxdo(answer('', 429, { 'retry-after': '15' })).list('latest', signal)).rejects.toThrow('请求过于频繁，请 15 秒后再试')
   })
 
   it('says a missing topic does not exist or needs a login', async () => {

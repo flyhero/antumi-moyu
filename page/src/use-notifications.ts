@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { z } from 'zod'
-import { NotificationPage, NotificationUpdate, type CommunityId, type ForumAccount, type ForumNotification } from '../../src/community'
+import { NotificationPage, NotificationUpdate, type CommunityId, type NotificationBootstrap, type ForumAccount, type ForumNotification } from '../../src/community'
+import { forumCooldownRemaining, noteForumRefusal } from './forum-cooldown'
 import type { PageHost } from './host'
 import { callReader, errorMessage } from './reader-client'
 
@@ -8,6 +9,8 @@ type Inbox = { key: string; items: ForumNotification[]; page: number; more: bool
 const empty = (key: string, unread: number | null): Inbox => ({ key, items: [], page: 0, more: false, unread, seenId: null, readOnOpen: false, loading: false, error: null, readError: null, reading: null })
 const V2EX_INTERVAL = 3 * 60_000
 const RETRY_MAX = 3 * 60_000
+// Coming back to the page pulls a distant poll forward, never one that is about to run.
+const RESUME_GRACE = 5_000
 
 function messageBusClientId(): string {
   return [...crypto.getRandomValues(new Uint8Array(16))].map((byte) => byte.toString(16).padStart(2, '0')).join('')
@@ -55,7 +58,9 @@ export function useNotifications(host: PageHost, community: CommunityId | null, 
     } catch (error) {
       if (current.current === key && generation.current === ticket) {
         failedPage.current = page
-        setInbox((before) => ({ ...before, loading: false, error: errorMessage(error) }))
+        const message = errorMessage(error)
+        noteForumRefusal(message)
+        setInbox((before) => ({ ...before, loading: false, error: message }))
       }
     } finally {
       if (current.current === key && generation.current === ticket) loading.current = null
@@ -91,43 +96,73 @@ export function useNotifications(host: PageHost, community: CommunityId | null, 
     let running = false
     let timer: ReturnType<typeof setTimeout> | undefined
     let cursor: number | undefined
+    // The stream's address, kept in memory so a poll need not fetch the home page again.
+    let bootstrap: NotificationBootstrap | undefined
+    let userId = account.userId
     let failures = 0
+    // When the pending timer fires, and whether it is a wait after a failure that focus must not cut short.
+    let due: number | null = null
+    let backingOff = false
     const clientId = messageBusClientId()
-    const schedule = (delay: number) => {
+    const schedule = (delay: number, afterFailure = false) => {
       clearTimeout(timer)
-      if (!stopped) timer = setTimeout(poll, delay)
+      due = null
+      if (stopped) return
+      due = Date.now() + delay
+      backingOff = afterFailure
+      timer = setTimeout(poll, delay)
     }
     const poll = async () => {
+      due = null
       if (stopped || running || document.visibilityState === 'hidden') return
+      const wait = forumCooldownRemaining()
+      if (wait > 0) {
+        schedule(wait, true)
+        return
+      }
       running = true
       try {
         const update = NotificationUpdate.parse(await callReader(host, 'notificationWatch', {
-          account: account.username, clientId, ...(cursor !== undefined ? { cursor } : {}), ...(account.userId !== undefined ? { userId: account.userId } : {})
+          account: account.username, clientId, ...(cursor !== undefined ? { cursor } : {}), ...(userId !== undefined ? { userId } : {}),
+          ...(bootstrap ? { bootstrap } : {})
         }))
         if (stopped) return
         if (update.state === 'ok') {
           if (update.account.username !== account.username) return
           failures = 0
           cursor = update.cursor ?? cursor
+          bootstrap = update.bootstrap ?? bootstrap
+          userId = update.account.userId ?? userId
           setInbox((before) => before.key === key ? { ...before, unread: update.account.unreadNotifications ?? before.unread } : before)
           if (community === 'linuxdo' && update.changed && opened.current) void loadCurrent.current(1)
           schedule(update.interval)
         } else {
           failures += 1
-          const delay = update.retryAfter ? update.retryAfter * 1000 : Math.min(1000 * 2 ** Math.min(failures, 7), RETRY_MAX)
-          schedule(delay)
+          // A login answer may mean the stream's address or key went stale: read it again next time.
+          if (update.state === 'login') bootstrap = undefined
+          if (update.message) noteForumRefusal(update.message)
+          const delay = Math.max(
+            update.retryAfter ? update.retryAfter * 1000 : Math.min(1000 * 2 ** Math.min(failures, 7), RETRY_MAX),
+            forumCooldownRemaining()
+          )
+          schedule(delay, true)
         }
-      } catch {
+      } catch (error) {
         if (!stopped) {
           failures += 1
-          schedule(Math.min(1000 * 2 ** Math.min(failures, 7), RETRY_MAX))
+          noteForumRefusal(errorMessage(error))
+          schedule(Math.max(Math.min(1000 * 2 ** Math.min(failures, 7), RETRY_MAX), forumCooldownRemaining()), true)
         }
       } finally {
         running = false
       }
     }
+    // Focus and visibility fire together. Restart a poll that stopped while hidden, or pull a long wait
+    // forward; leave a poll in flight, one about to run, and a wait after a failure alone.
     const resume = () => {
-      if (document.visibilityState !== 'hidden' && !running) schedule(0)
+      if (document.visibilityState === 'hidden' || running) return
+      if (due !== null && (backingOff || due - Date.now() <= RESUME_GRACE)) return
+      schedule(0)
     }
     document.addEventListener('visibilitychange', resume)
     if (community === 'linuxdo') window.addEventListener('focus', resume)

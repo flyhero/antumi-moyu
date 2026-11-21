@@ -1,7 +1,7 @@
 import { load } from 'cheerio/slim'
 import { z } from 'zod'
 import type { PluginPageContext } from '@antumi/plugin-sdk'
-import { NotificationWatchParams, type CommunityId, type NotificationUpdate } from './community.js'
+import { NotificationBootstrap, NotificationWatchParams, type CommunityId, type ForumAccount, type NotificationUpdate } from './community.js'
 import { checkedSite, forumAccount, siteFailure, siteRequest } from './forum-session.js'
 
 const count = z.number().int().nonnegative()
@@ -11,7 +11,7 @@ const Message = z.object({ channel: z.string(), message_id: count.optional(), da
 const Counts = z.object({ all_unread_notifications_count: count.optional() })
 const decode = (value: unknown): unknown => typeof value === 'string' ? JSON.parse(value) : value
 
-// The shared key stays in this invocation, never in the page or saved state.
+// The shared key goes back to the page only to be handed in again on the next poll; it is never saved.
 export function notificationBootstrap(html: string) {
   const $ = load(html)
   const element = $('#data-preloaded, [data-preloaded]').first()
@@ -34,21 +34,36 @@ export async function watchForumNotifications(community: CommunityId, params: un
       return { state: 'ok', account, changed: false, interval: 180_000 }
     }
     if (!(await context.browser({ action: 'status', site: 'forum' })).connected) return { state: 'login', message: '请先登录后接收通知' }
-    const home = await siteRequest(context, '/')
-    if ([301, 302, 303, 401].includes(home.status)) return { state: 'login', message: '请重新登录后接收通知' }
-    const bootstrap = notificationBootstrap(checkedSite(home))
-    const { user, base, sharedKey, interval } = bootstrap
-    if (user.username !== input.account || (input.userId !== undefined && input.userId !== user.id)) return { state: 'login', message: '登录账号已变化，请检查登录状态' }
-    const account = { username: user.username, userId: user.id, ...(user.all_unread_notifications_count !== undefined ? { unreadNotifications: user.all_unread_notifications_count } : {}) }
-    if (input.cursor === undefined) return { state: 'ok', account, cursor: user.notification_channel_position ?? -1, changed: false, interval: 100 }
-    const channel = `/notification/${user.id}`
-    const body = new URLSearchParams({ [channel]: String(input.cursor), __seq: '1' }).toString()
-    const path = `${base.pathname.replace(/\/$/, '')}/message-bus/${input.clientId}/poll`
-    const result = await context.browser({ action: 'request', site: 'forum', origin: base.origin, path, method: 'POST', timeoutMs: 35_000, body,
-      headers: { 'content-type': 'application/x-www-form-urlencoded', 'dont-chunk': 'true', 'discourse-present': 'true', ...(base.origin !== 'https://linux.do' && sharedKey ? { 'x-shared-session-key': sharedKey } : {}) } })
+    // After the first visit the page hands the stream's address back, so a poll is one request.
+    let stream: NotificationBootstrap
+    let fresh: NotificationBootstrap | undefined
+    let userId: number
+    let account: ForumAccount
+    let cursor: number
+    if (input.bootstrap && input.cursor !== undefined && input.userId !== undefined) {
+      stream = input.bootstrap
+      userId = input.userId
+      account = { username: input.account, userId }
+      cursor = input.cursor
+    } else {
+      const home = await siteRequest(context, '/')
+      if ([301, 302, 303, 401].includes(home.status)) return { state: 'login', message: '请重新登录后接收通知' }
+      const { user, base, sharedKey, interval } = notificationBootstrap(checkedSite(home))
+      if (user.username !== input.account || (input.userId !== undefined && input.userId !== user.id)) return { state: 'login', message: '登录账号已变化，请检查登录状态' }
+      userId = user.id
+      account = { username: user.username, userId: user.id, ...(user.all_unread_notifications_count !== undefined ? { unreadNotifications: user.all_unread_notifications_count } : {}) }
+      fresh = NotificationBootstrap.parse({ origin: base.origin, path: base.pathname, ...(sharedKey ? { sharedKey } : {}), interval })
+      stream = fresh
+      if (input.cursor === undefined) return { state: 'ok', account, cursor: user.notification_channel_position ?? -1, changed: false, interval: 100, bootstrap: fresh }
+      cursor = input.cursor
+    }
+    const channel = `/notification/${userId}`
+    const body = new URLSearchParams({ [channel]: String(cursor), __seq: '1' }).toString()
+    const path = `${stream.path.replace(/\/$/, '')}/message-bus/${input.clientId}/poll`
+    const result = await context.browser({ action: 'request', site: 'forum', origin: stream.origin, path, method: 'POST', timeoutMs: 35_000, body,
+      headers: { 'content-type': 'application/x-www-form-urlencoded', 'dont-chunk': 'true', 'discourse-present': 'true', ...(stream.origin !== 'https://linux.do' && stream.sharedKey ? { 'x-shared-session-key': stream.sharedKey } : {}) } })
     if (!result.response) throw new Error('通知连接没有返回内容')
     const messages = z.array(Message).max(1000).parse(JSON.parse(checkedSite(result.response)))
-    let cursor = input.cursor
     let changed = false
     for (const message of messages) {
       if (message.channel === '/__status') {
@@ -61,7 +76,7 @@ export async function watchForumNotifications(community: CommunityId, params: un
         changed = true
       }
     }
-    return { state: 'ok', account, cursor, changed, interval: changed ? 100 : interval }
+    return { state: 'ok', account, cursor, changed, interval: changed ? 100 : stream.interval, ...(fresh ? { bootstrap: fresh } : {}) }
   } catch (error) {
     context.signal.throwIfAborted()
     const failure = siteFailure(error)

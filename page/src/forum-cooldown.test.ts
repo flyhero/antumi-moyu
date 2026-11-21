@@ -1,0 +1,32 @@
+import { afterEach, describe, expect, it } from 'vitest'
+import { clearForumCooldown, forumCooldownRemaining, forumCoolingDown, noteForumRefusal } from './forum-cooldown'
+
+describe('forum cooldown', () => {
+  afterEach(() => clearForumCooldown())
+
+  it('stays idle until a refusal is noted', () => {
+    expect(forumCoolingDown(1_000)).toBe(false)
+    expect(forumCooldownRemaining(1_000)).toBe(0)
+  })
+
+  it('reads an explicit retry delay from the refusal text', () => {
+    noteForumRefusal('请求过于频繁，请 15 秒后再试', 1_000)
+    expect(forumCoolingDown(1_000)).toBe(true)
+    expect(forumCooldownRemaining(1_000)).toBe(15_000)
+    expect(forumCoolingDown(16_000)).toBe(false)
+  })
+
+  it('uses a default minute for bare rate-limit and Cloudflare refusals', () => {
+    noteForumRefusal('请求过于频繁，请稍后再试', 1_000)
+    expect(forumCooldownRemaining(1_000)).toBe(60_000)
+    clearForumCooldown()
+    noteForumRefusal('linux.do 暂时拦住了请求，过一会儿再试', 2_000)
+    expect(forumCooldownRemaining(2_000)).toBe(60_000)
+  })
+
+  it('keeps the longer of overlapping cooldowns', () => {
+    noteForumRefusal('请求过于频繁，请 10 秒后再试', 1_000)
+    noteForumRefusal('请求过于频繁，请 30 秒后再试', 5_000)
+    expect(forumCooldownRemaining(5_000)).toBe(30_000)
+  })
+})

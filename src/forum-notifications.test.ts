@@ -12,6 +12,7 @@ const bootstrap = (overrides: Record<string, unknown> = {}) => {
   const preloaded = JSON.stringify({ currentUser: JSON.stringify(currentUser), siteSettings: JSON.stringify({ long_polling_base_url: 'https://ping.linux.do', polling_interval: 3000 }) })
   return `<meta name="shared_session_key" content="shared"><script type="application/json" id="data-preloaded">${preloaded}</script>`
 }
+const stream = { origin: 'https://ping.linux.do', path: '/', sharedKey: 'shared', interval: 3000 }
 const response = (body: string, status = 200): PluginBrowserResponse => ({ body, status, headers: {} })
 const discourse = (extra: object = {}) => JSON.stringify({ notifications: [{ id: 101, notification_type: 2, read: false, created_at: '2026-11-18T10:00:00Z', topic_id: 42, post_number: 47,
   data: { display_username: 'bob', topic_title: '<b>A &amp; B</b><script>bad()</script>' } }], total_rows_notifications: 21, seen_notification_id: 90, ...extra })
@@ -41,7 +42,7 @@ describe('forum notifications', () => {
   it('starts a linux.do notification cursor before opening a long poll', async () => {
     const f = fixture([response(bootstrap())])
     expect(await watchForumNotifications('linuxdo', { account: 'alice', clientId: 'a'.repeat(32) }, f.context)).toEqual({
-      state: 'ok', account: { username: 'alice', userId: 7, unreadNotifications: 3 }, cursor: 90, changed: false, interval: 100
+      state: 'ok', account: { username: 'alice', userId: 7, unreadNotifications: 3 }, cursor: 90, changed: false, interval: 100, bootstrap: stream
     })
     expect(f.requests.filter((request) => request.action === 'request')).toHaveLength(1)
   })
@@ -50,10 +51,41 @@ describe('forum notifications', () => {
     const payload = JSON.stringify([{ channel: '/notification/7', message_id: 91, data: { all_unread_notifications_count: 4 } }])
     const f = fixture([response(bootstrap()), response(payload)])
     expect(await watchForumNotifications('linuxdo', { account: 'alice', clientId: 'b'.repeat(32), cursor: 90, userId: 7 }, f.context)).toEqual({
-      state: 'ok', account: { username: 'alice', userId: 7, unreadNotifications: 4 }, cursor: 91, changed: true, interval: 100
+      state: 'ok', account: { username: 'alice', userId: 7, unreadNotifications: 4 }, cursor: 91, changed: true, interval: 100, bootstrap: stream
     })
     expect(f.requests.at(-1)).toMatchObject({ action: 'request', origin: 'https://ping.linux.do', path: '/message-bus/' + 'b'.repeat(32) + '/poll', method: 'POST', timeoutMs: 35000,
       headers: { 'x-shared-session-key': 'shared', 'discourse-present': 'true', 'dont-chunk': 'true' } })
+  })
+
+  it('polls with the page-held stream address and does not read the home page again', async () => {
+    const f = fixture([response('[]')])
+    expect(await watchForumNotifications('linuxdo', { account: 'alice', clientId: 'e'.repeat(32), cursor: 90, userId: 7, bootstrap: stream }, f.context)).toEqual({
+      state: 'ok', account: { username: 'alice', userId: 7 }, cursor: 90, changed: false, interval: 3000
+    })
+    const requests = f.requests.filter((request) => request.action === 'request')
+    expect(requests).toHaveLength(1)
+    expect(requests[0]).toMatchObject({ origin: 'https://ping.linux.do', path: '/message-bus/' + 'e'.repeat(32) + '/poll', method: 'POST',
+      headers: { 'x-shared-session-key': 'shared' } })
+  })
+
+  it('reads the home page again when the held address has no cursor or user to go with it', async () => {
+    const f = fixture([response(bootstrap())])
+    expect(await watchForumNotifications('linuxdo', { account: 'alice', clientId: 'e'.repeat(32), bootstrap: stream }, f.context)).toMatchObject({ cursor: 90, bootstrap: stream })
+    expect(f.requests.filter((request) => request.action === 'request')).toHaveLength(1)
+    expect(f.requests.at(-1)).toMatchObject({ path: '/' })
+  })
+
+  it('asks the page to sign in again when a held address is refused', async () => {
+    const f = fixture([response('', 403)])
+    expect(await watchForumNotifications('linuxdo', { account: 'alice', clientId: 'e'.repeat(32), cursor: 90, userId: 7, bootstrap: stream }, f.context)).toMatchObject({ state: 'login' })
+  })
+
+  it('refuses a held address that points anywhere but linux.do', async () => {
+    const f = fixture([])
+    for (const bad of [{ ...stream, origin: 'https://other.test' }, { ...stream, path: '/../x' }, { ...stream, path: 'x' }]) {
+      await expect(watchForumNotifications('linuxdo', { account: 'alice', clientId: 'e'.repeat(32), cursor: 90, userId: 7, bootstrap: bad }, f.context)).rejects.toThrow()
+    }
+    expect(f.requests).toHaveLength(0)
   })
 
   it('uses a MessageBus status frame to recover a cursor even when it has no message id', async () => {
