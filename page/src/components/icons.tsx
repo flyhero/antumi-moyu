@@ -71,11 +71,11 @@ export function HeartIcon() {
   return <svg {...stroked}><path d="M10 16s-6-3.6-6-8a3.2 3.2 0 0 1 6-1.6A3.2 3.2 0 0 1 16 8c0 4.4-6 8-6 8Z" /></svg>
 }
 
-// A page of stand-in titles. A slash means the list shows the forum's own titles.
+// A chat bubble with a title's two lines: a stand-in chat title. A slash means the list shows the forum's own titles.
 export function TitleDisguiseIcon({ active }: { active: boolean }) {
   return <svg {...stroked}>
-    <path d="M6 3.5h5.5L15.5 7.5V16a1 1 0 0 1-1 1h-8.5a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1z" />
-    <path d="M11.5 3.5V7.5H15.5M7.5 11h5M7.5 14h3" />
+    <path d="M4 4.5h12a1.5 1.5 0 0 1 1.5 1.5v6.5a1.5 1.5 0 0 1-1.5 1.5H9.5L6 17.5v-3.5H4A1.5 1.5 0 0 1 2.5 12.5V6A1.5 1.5 0 0 1 4 4.5Z" />
+    <path d="M6.5 8h7M6.5 11h4" />
     {!active && <path d="m3.5 3.5 13 13" />}
   </svg>
 }
