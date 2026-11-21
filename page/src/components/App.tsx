@@ -19,6 +19,7 @@ import { coversFor } from '../title-disguise'
 import { usePageState } from '../use-page-state'
 import { useLikes } from '../use-likes'
 import { useReply } from '../use-reply'
+import { useUpload } from '../use-upload'
 
 function isTyping(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
@@ -47,6 +48,7 @@ export function App({ host }: { host: PageHost }) {
     if (result.state === 'sent') reader.showSent(topic, result.location)
     reader.refreshList()
   })
+  const upload = useUpload(host, words, input, `${thread?.topic.community ?? ''}:${thread?.topic.id ?? ''}:${session.account?.username ?? ''}`, reply.text, reply.setText)
   const likes = useLikes(host, thread?.topic ?? null, session.account?.username ?? null, (text) => setNotice(text))
   const notifications = useNotifications(host, reader.community?.id ?? null, session.account)
   const streaming = stream.shown !== null
@@ -257,6 +259,7 @@ export function App({ host }: { host: PageHost }) {
           loginBusy={session.busy}
           onViewPost={openInBrowser}
           canReply={session.account !== null && topic !== null}
+          upload={topic?.community === 'linuxdo' ? upload : null}
         />
       </main>
       {viewed && <ImageViewer image={viewed} words={words} onOpen={(url) => host.open(url)} onClose={() => setViewed(null)} />}

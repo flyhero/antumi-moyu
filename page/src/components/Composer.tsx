@@ -1,9 +1,11 @@
 import type { Ref } from 'preact'
 import type { Words } from '../dictionary'
-import { AvatarDisguiseIcon, ImageDisplayIcon, ReplyIcon, CloseIcon, StreamingIcon } from './icons'
+import { useRef } from 'preact/hooks'
+import { AvatarDisguiseIcon, ImageDisplayIcon, AttachIcon, ReplyIcon, CloseIcon, StreamingIcon } from './icons'
 import type { useReply } from '../use-reply'
+import type { useUpload } from '../use-upload'
 
-export function Composer({ words, stream, images, disguiseAvatars, input, onStream, onImages, onDisguiseAvatars, reply, canReply, storageError, onLogin, loginBusy, onViewPost }: {
+export function Composer({ words, stream, images, disguiseAvatars, input, onStream, onImages, onDisguiseAvatars, reply, canReply, storageError, onLogin, loginBusy, onViewPost, upload }: {
   words: Words
   stream: boolean
   images: boolean
@@ -18,7 +20,12 @@ export function Composer({ words, stream, images, disguiseAvatars, input, onStre
   onLogin: () => void
   loginBusy: boolean
   onViewPost: () => void
+  // Absent where the forum takes no pictures from here (V2EX).
+  upload: ReturnType<typeof useUpload> | null
 }) {
+  const picker = useRef<HTMLInputElement>(null)
+  const canUpload = upload !== null && canReply && !reply.sending
+  const pictures = (list: FileList | null | undefined) => Array.from(list ?? []).filter((file) => file.type.startsWith('image/'))
   const failure = reply.sending ? null : reply.feedback?.failure?.kind ?? (reply.uncertain ? 'unconfirmed' : null)
   const newlineKey = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Win'
   return (
@@ -36,6 +43,19 @@ export function Composer({ words, stream, images, disguiseAvatars, input, onStre
           aria-label={words.replyPlaceholder} placeholder={canReply ? words.replyPlaceholder : words.loginToReply}
           value={reply.text} disabled={!canReply || reply.sending}
           onInput={(event) => reply.setText(event.currentTarget.value)}
+          onPaste={(event) => {
+            const files = pictures(event.clipboardData?.files)
+            if (!canUpload || files.length === 0) return
+            event.preventDefault()
+            void upload.upload(files)
+          }}
+          onDragOver={(event) => { if (canUpload && event.dataTransfer?.types.includes('Files')) event.preventDefault() }}
+          onDrop={(event) => {
+            const files = pictures(event.dataTransfer?.files)
+            if (!canUpload || files.length === 0) return
+            event.preventDefault()
+            void upload.upload(files)
+          }}
           onKeyDown={(event) => {
             if (event.key !== 'Enter' || event.isComposing || event.keyCode === 229) return
             event.stopPropagation()
@@ -66,9 +86,21 @@ export function Composer({ words, stream, images, disguiseAvatars, input, onStre
               <AvatarDisguiseIcon active={disguiseAvatars} />
             </button>
           </div>
+          {upload && <div className="chat-attach">
+            <button type="button" className="chat-picker reading-toggle" aria-label={words.insertPicture} data-tooltip={words.insertPicture} disabled={!canUpload} onClick={() => picker.current?.click()}>
+              <AttachIcon />
+            </button>
+            <input ref={picker} type="file" accept="image/*" multiple hidden onChange={(event) => {
+              const files = pictures(event.currentTarget.files)
+              event.currentTarget.value = ''
+              if (files.length) void upload.upload(files)
+            }} />
+          </div>}
           <span className="reply-hint muted">{words.replyHint(newlineKey)}</span>
-          <button type="button" className="button reply-send" disabled={!canReply || reply.sending || reply.uncertain || reply.cooling || !reply.text.trim()} onClick={() => void reply.send()}>{reply.sending ? words.sendingReply : reply.cooling ? words.replyCooling : words.sendReply}</button>
+          <button type="button" className="button reply-send" disabled={!canReply || reply.sending || reply.uncertain || reply.cooling || !reply.text.trim() || (upload?.uploading ?? 0) > 0} onClick={() => void reply.send()}>{reply.sending ? words.sendingReply : reply.cooling ? words.replyCooling : words.sendReply}</button>
         </div>
+        {upload && upload.uploading > 0 && <p className="reply-feedback" role="status">{words.uploadingPictures(upload.uploading)}</p>}
+        {upload?.error && <p className="reply-feedback" data-error="" role="alert">{upload.error}</p>}
         {storageError && <p className="reply-feedback" data-error="" role="alert">{words.draftNotSaved}</p>}
         {reply.uncertain && !reply.sending && !reply.feedback && <p className="reply-feedback" data-error="" role="alert">{words.replyUnconfirmed}</p>}
         {reply.feedback && <p className="reply-feedback" data-error={reply.feedback.error || undefined} role={reply.feedback.error ? 'alert' : 'status'}>{reply.feedback.text || words.replySent}</p>}

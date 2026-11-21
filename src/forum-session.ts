@@ -31,7 +31,7 @@ export async function replyOutcome(community: CommunityId, params: unknown, cont
   }
 }
 
-export async function siteRequest(context: PluginPageContext, path: string, options: { method?: 'GET' | 'POST'; headers?: Record<string, string>; body?: string } = {}): Promise<PluginBrowserResponse> {
+export async function siteRequest(context: PluginPageContext, path: string, options: { method?: 'GET' | 'POST'; headers?: Record<string, string>; body?: string; bodyEncoding?: 'text' | 'base64'; timeoutMs?: number } = {}): Promise<PluginBrowserResponse> {
   context.signal.throwIfAborted()
   const result = await context.browser({ action: 'request', site: 'forum', path, ...options })
   if (!result.response) throw new Error('浏览器没有返回站点内容，请重新登录')

@@ -746,6 +746,8 @@ body[data-resizing-list] { cursor: col-resize; user-select: none; }
 .chat-input::placeholder { color: var(--text-3); }
 .chat-options { display: flex; align-items: center; gap: 2px; min-height: 28px; padding: 0 6px 6px; }
 .chat-reading-options { display: flex; align-items: center; flex-shrink: 0; gap: 2px; }
+/* Attaching is not a reading switch: it stands apart, after a hairline. */
+.chat-attach { display: flex; align-items: center; flex-shrink: 0; gap: 2px; padding-left: 6px; border-left: 1px solid var(--border); }
 .title-cover-anchor { position: relative; display: inline-flex; align-items: center; }
 .title-cover-anchor[data-open] { z-index: 31; }
 .title-cover-edit { flex-shrink: 0; justify-content: center; width: 22px; padding: 0; }

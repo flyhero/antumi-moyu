@@ -67,6 +67,11 @@ export function CloseIcon() {
   return <svg {...stroked}><path d="m5.5 5.5 9 9m0-9-9 9" /></svg>
 }
 
+// A paperclip, as chat apps attach things: the picture toggles beside it already use a frame.
+export function AttachIcon() {
+  return <svg {...stroked}><path d="m15.5 9.5-5.6 5.6a3.3 3.3 0 0 1-4.7-4.7l6-6a2.2 2.2 0 0 1 3.1 3.1l-6 6a1.1 1.1 0 0 1-1.6-1.6l5.5-5.5" /></svg>
+}
+
 export function HeartIcon({ filled = false }: { filled?: boolean }) {
   return <svg {...stroked} fill={filled ? 'currentColor' : 'none'}><path d="M10 16s-6-3.6-6-8a3.2 3.2 0 0 1 6-1.6A3.2 3.2 0 0 1 16 8c0 4.4-6 8-6 8Z" /></svg>
 }

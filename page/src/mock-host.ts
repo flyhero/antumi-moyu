@@ -1,4 +1,4 @@
-import { LikeParams, ReplyParams, type CommunityId, type Post } from '../../src/community'
+import { LikeParams, ReplyParams, UploadParams, type CommunityId, type Post } from '../../src/community'
 import type { PageHost, PageTheme } from './host'
 import { mockCommunities, mockList, mockThread } from './mock-data'
 import { mockNotifications } from './mock-notifications'
@@ -116,6 +116,12 @@ export function mockHost(): PageHost {
         const community = isCommunityId(selected) ? selected : isRecord(state) && isCommunityId(state.community) ? state.community : 'linuxdo'
         return JSON.parse(JSON.stringify({ state: 'ok', account: { username: 'preview-reader', unreadNotifications: unread, ...(community === 'linuxdo' ? { userId: 7 } : {}) },
           ...(community === 'linuxdo' ? { cursor: typeof params.cursor === 'number' ? params.cursor : 100 } : {}), changed: false, interval: community === 'linuxdo' ? 3000 : 180000 }))
+      }
+      if (method === 'upload') {
+        if (!signedIn) return JSON.parse('{"state":"failed","failure":{"kind":"login","message":"请先登录"}}')
+        const picture = UploadParams.parse(params)
+        console.info('[mock host] upload', picture.name, picture.type, Math.round(picture.data.length * 3 / 4))
+        return JSON.parse(JSON.stringify({ state: 'done', markdown: `![${picture.name}](upload://preview${Date.now()}.${picture.type.split('/')[1]})` }))
       }
       if (method === 'like') {
         if (!signedIn) return JSON.parse('{"state":"failed","failure":{"kind":"login","message":"请先登录"}}')

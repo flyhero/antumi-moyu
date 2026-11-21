@@ -101,6 +101,21 @@ export const LikeResult = z.discriminatedUnion('state', [
 ])
 export type LikeResult = z.infer<typeof LikeResult>
 
+// A picture for a reply, compressed by the page; data is its bytes in base64. The page keeps it
+// under the host's 3 MiB call limit.
+export const UPLOAD_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const
+export const UploadParams = z.object({
+  name: z.string().trim().min(1).max(200),
+  type: z.enum(UPLOAD_TYPES),
+  data: z.string().min(1).max(3_000_000).regex(/^[A-Za-z0-9+/]*={0,2}$/)
+})
+export const UploadResult = z.discriminatedUnion('state', [
+  // What goes into the draft where the picture should be: the forum's own markdown for it.
+  z.object({ state: z.literal('done'), markdown: z.string().min(1).max(1000) }),
+  z.object({ state: z.literal('failed'), failure: ReplyFailure })
+])
+export type UploadResult = z.infer<typeof UploadResult>
+
 export const ForumNotification = z.object({
   id: z.string().regex(/^\d{1,16}$/),
   kind: z.enum(['reply', 'mention', 'like', 'quote', 'message', 'other']),
@@ -163,6 +178,7 @@ export type ReaderMethods = {
   notificationWatch: { params: z.input<typeof NotificationWatchParams>; result: NotificationUpdate }
   reply: { params: z.input<typeof ReplyParams>; result: ReplyResult }
   like: { params: z.input<typeof LikeParams>; result: LikeResult }
+  upload: { params: z.input<typeof UploadParams>; result: UploadResult }
   communities: { params: undefined; result: CommunityInfo[] }
   list: { params: z.input<typeof ListParams>; result: Topic[] }
   thread: { params: z.input<typeof ThreadParams>; result: Thread }

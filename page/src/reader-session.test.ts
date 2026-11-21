@@ -55,6 +55,7 @@ function fixture(initial: unknown = null, community: CommunityId = 'linuxdo') {
       return thread({ ...([topic, another, third].find((topic) => topic.id === input.id) ?? topic), community }, input.floor || input.tail ? 3 : input.page ?? 1)
     }
     if (method === 'reply') return blockedReply ?? result
+    if (method === 'upload') return { state: 'done', markdown: '![shot|2x2](upload://abc.png)' }
     if (method === 'like') {
       const input = JSON.parse(JSON.stringify(params))
       return input.post === '1900' ? { state: 'failed', failure: { kind: 'rejected', message: 'Like refused' } } : { state: 'done', liked: input.liked, likes: null }
@@ -364,6 +365,24 @@ describe('reader sessions', () => {
     expect(f.calls.mock.calls.filter(([method]) => method === 'thread')).toEqual([['thread', { community: 'linuxdo', id: '43', page: 1, authenticated: true }]])
     expect(document.querySelector('.chat-working')).toBeNull()
     expect(document.body.textContent).toContain('Reply 20')
+  })
+
+  it('uploads a pasted picture to linux.do and puts its markdown into the draft', async () => {
+    const f = fixture()
+    await mount(f.host); await openTopic(); await type('Look:')
+    const file = new File([new Uint8Array([1, 2, 3])], 'shot.png', { type: 'image/png' })
+    const paste = new Event('paste', { bubbles: true, cancelable: true })
+    Object.defineProperty(paste, 'clipboardData', { value: { files: [file] } })
+    await act(async () => { input().dispatchEvent(paste) }); await settle(); await settle()
+    expect(paste.defaultPrevented).toBe(true)
+    expect(f.calls.mock.calls.filter(([method]) => method === 'upload')).toEqual([['upload', { name: 'shot.png', type: 'image/png', data: 'AQID' }]])
+    expect(input().value).toBe('Look:\n![shot|2x2](upload://abc.png)\n')
+  })
+
+  it('offers no picture upload on V2EX', async () => {
+    const f = fixture(null, 'v2ex')
+    await mount(f.host); await openTopic()
+    expect(() => button('插入图片（也可以粘贴或拖进输入框）')).toThrow()
   })
 
   it('preserves the current thread when a reply awaits moderation', async () => {
