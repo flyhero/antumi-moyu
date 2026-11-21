@@ -35,7 +35,7 @@ export function App({ host }: { host: PageHost }) {
   const reader = useReader(host, store, (thread, restoring) => {
     if (!restoring && streamWanted.current) stream.start(thread.posts.length)
     else stream.finish()
-  }, session.account?.username ?? null)
+  }, session.account?.username ?? null, session.settled)
   streamWanted.current = reader.saved.stream && !reduced
   const [notice, setNotice] = useState<string | null>(null)
   const [viewed, setViewed] = useState<ViewedImage | null>(null)

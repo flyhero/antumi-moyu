@@ -29,7 +29,7 @@ export type ThreadState = {
 }
 export type NextPage = 'loading' | 'last' | 'busy' | 'closed'
 
-export function useReader(host: PageHost, store: PageState, onOpened: (thread: Thread, restoring: boolean) => void, account: string | null = null) {
+export function useReader(host: PageHost, store: PageState, onOpened: (thread: Thread, restoring: boolean) => void, account: string | null = null, sessionSettled = true) {
   const saved = store.state
   const setSaved = store.update
   const [communities, setCommunities] = useState<CommunityInfo[] | null>(null)
@@ -95,7 +95,7 @@ export function useReader(host: PageHost, store: PageState, onOpened: (thread: T
     })
   }, [communityId, channelId, list.key, list.expiresAt, loadList, account])
 
-  const fetchPage = useCallback((topic: Topic, page: number, force: boolean, intent?: { replace?: boolean; position?: ReadingPosition; destination?: Destination }) => {
+  const fetchPage = useCallback((topic: Topic, page: number, force: boolean, intent?: { replace?: boolean; position?: ReadingPosition; destination?: Destination; returning?: boolean }) => {
     retryThread.current = () => fetchPage(topic, page, true, intent)
     const ticket = ++tickets.current.thread
     const key = `${topic.community}:${topic.id}:${page}`
@@ -112,7 +112,7 @@ export function useReader(host: PageHost, store: PageState, onOpened: (thread: T
       })
       const floors = [result.opening?.floor ?? 0, ...result.posts.map((post) => post.floor)]
       setSaved((state) => markRead(state, readKey(topic.community, topic.id), Math.max(...floors)))
-      if (intent?.replace) opened.current(result, Boolean(intent.position || intent.destination))
+      if (intent?.replace) opened.current(result, Boolean(intent.position || intent.destination || intent.returning))
     }
     const cached = force || intent?.destination !== undefined ? undefined : caches.threads.get(key)
     if (cached) {
@@ -134,12 +134,32 @@ export function useReader(host: PageHost, store: PageState, onOpened: (thread: T
     )
   }, [host, caches, account, setSaved])
 
-  const openTopic = (topic: Topic, force = false) => {
+  const openTopic = (topic: Topic, force = false, returning = false) => {
     const position = saved.positions[scopeKey(topic.community, account, topic.id)]
     const page = position?.page ?? 1
     setThread({ topic, pages: [], loading: page, error: null, focus: null })
-    fetchPage(topic, page, force, { replace: true, position })
+    fetchPage(topic, page, force, { replace: true, position, returning })
   }
+
+  // Coming back to the page opens the topic left open, once the session says as whom to read it,
+  // so a signed-in reader does not fetch it twice.
+  const returned = useRef(false)
+  useEffect(() => {
+    if (returned.current || !sessionSettled || !communityId) return
+    returned.current = true
+    const topic = saved.opened[communityId]
+    if (topic && !currentTopic.current) openTopic(topic, false, true)
+  }, [sessionSettled, communityId])
+
+  const openedTopic = thread?.topic
+  useEffect(() => {
+    if (!openedTopic) return
+    setSaved((state) => {
+      const before = state.opened[openedTopic.community]
+      if (before?.id === openedTopic.id && before.title === openedTopic.title) return state
+      return { ...state, opened: { ...state.opened, [openedTopic.community]: openedTopic } }
+    })
+  }, [openedTopic])
 
   const currentTopic = useRef<Topic | null>(null)
   const previousAccount = useRef(account)

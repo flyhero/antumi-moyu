@@ -355,6 +355,17 @@ describe('reader sessions', () => {
     expect(document.querySelector('.chat-turn-like')).toBeNull()
   })
 
+  it('reopens the topic left open, at its place, with one read and no typing out', async () => {
+    const f = fixture({ stream: true })
+    await mount(f.host); await openTopic('Another topic')
+    expect(f.saved().opened.linuxdo).toMatchObject({ id: '43' })
+    await unmount(); f.calls.mockClear()
+    await mount(f.host)
+    expect(f.calls.mock.calls.filter(([method]) => method === 'thread')).toEqual([['thread', { community: 'linuxdo', id: '43', page: 1, authenticated: true }]])
+    expect(document.querySelector('.chat-working')).toBeNull()
+    expect(document.body.textContent).toContain('Reply 20')
+  })
+
   it('preserves the current thread when a reply awaits moderation', async () => {
     const f = fixture(); f.result({ state: 'pending', message: 'Waiting for review' })
     await mount(f.host); await openTopic(); await type('Review me'); await click('发送回复')

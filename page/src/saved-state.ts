@@ -1,4 +1,4 @@
-import { ReplyTarget, type CommunityId } from '../../src/community'
+import { ReplyTarget, Topic, type CommunityId } from '../../src/community'
 import { LIST_WIDTH_DEFAULT, readListWidth } from './list-width'
 import { readTitleCovers, type TitleCover } from './title-disguise'
 
@@ -26,11 +26,13 @@ export type SavedState = {
   read: Record<string, number>
   drafts: Record<string, Draft>
   positions: Record<string, ReadingPosition>
+  // The topic last open in each community, to open again on the next visit.
+  opened: Partial<Record<CommunityId, Topic>>
 }
 
 export const READ_LIMIT = 200
 
-export const defaultState: SavedState = { community: 'linuxdo', channel: null, stream: true, images: false, disguiseAvatars: false, disguiseTitles: false, titleCovers: [], listWidth: LIST_WIDTH_DEFAULT, read: {}, drafts: {}, positions: {} }
+export const defaultState: SavedState = { community: 'linuxdo', channel: null, stream: true, images: false, disguiseAvatars: false, disguiseTitles: false, titleCovers: [], listWidth: LIST_WIDTH_DEFAULT, read: {}, drafts: {}, positions: {}, opened: {} }
 
 export function isCommunityId(value: unknown): value is CommunityId {
   return value === 'linuxdo' || value === 'v2ex'
@@ -68,7 +70,7 @@ export function fitSavedState(state: SavedState): SavedState | null {
 }
 
 export function readSavedState(value: unknown): SavedState {
-  if (!isRecord(value)) return { ...defaultState, read: {} }
+  if (!isRecord(value)) return { ...defaultState, read: {}, opened: {} }
   const channel = value.channel
   const read: Record<string, number> = {}
   if (isRecord(value.read)) {
@@ -93,6 +95,11 @@ export function readSavedState(value: unknown): SavedState {
       && typeof page === 'number' && Number.isInteger(page) && page >= 1 && page <= 1000
       && typeof offset === 'number' && Number.isFinite(offset) && Math.abs(offset) <= 1_000_000) positions[key] = { floor, page, offset }
   }
+  const opened: Partial<Record<CommunityId, Topic>> = {}
+  if (isRecord(value.opened)) for (const [key, topic] of Object.entries(value.opened)) {
+    const parsed = Topic.safeParse(topic)
+    if (isCommunityId(key) && parsed.success && parsed.data.community === key) opened[key] = parsed.data
+  }
   return {
     community: isCommunityId(value.community) ? value.community : defaultState.community,
     channel: typeof channel === 'string' && channel.length > 0 && channel.length <= 64 ? channel : null,
@@ -102,7 +109,7 @@ export function readSavedState(value: unknown): SavedState {
     disguiseTitles: typeof value.disguiseTitles === 'boolean' ? value.disguiseTitles : defaultState.disguiseTitles,
     titleCovers: readTitleCovers(value.titleCovers),
     listWidth: readListWidth(value.listWidth),
-    read, drafts, positions
+    read, drafts, positions, opened
   }
 }
 

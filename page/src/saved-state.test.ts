@@ -16,7 +16,15 @@ describe('readSavedState', () => {
       images: 'yes',
       read: { 'v2ex:123': 4, 'linuxdo:9': -1, 'reddit:1': 3, 'v2ex:abc': 2, 'linuxdo:77': 1.5, 'linuxdo:78': 20 }
     })
-    expect(state).toEqual({ community: 'v2ex', channel: 'python', stream: false, images: false, disguiseAvatars: false, disguiseTitles: false, titleCovers: [], listWidth: 320, drafts: {}, positions: {}, read: { 'v2ex:123': 4, 'linuxdo:78': 20 } })
+    expect(state).toEqual({ community: 'v2ex', channel: 'python', stream: false, images: false, disguiseAvatars: false, disguiseTitles: false, titleCovers: [], listWidth: 320, drafts: {}, positions: {}, opened: {}, read: { 'v2ex:123': 4, 'linuxdo:78': 20 } })
+  })
+
+  it('keeps the topic last open in each community, and only a topic from that community', () => {
+    const topic = { community: 'linuxdo', id: '42', title: 'T', author: 'a', avatar: null, channel: null, replies: 3, time: null, url: 'https://linux.do/t/topic/42' }
+    const saved = readSavedState({ opened: { linuxdo: topic, v2ex: topic, reddit: topic } })
+    expect(saved.opened).toEqual({ linuxdo: topic })
+    expect(readSavedState(JSON.parse(JSON.stringify(saved)))).toEqual(saved)
+    expect(readSavedState({ opened: { linuxdo: { id: '42' } } }).opened).toEqual({})
   })
 
   it('round-trips avatar disguise and keeps older saved pages compatible', () => {

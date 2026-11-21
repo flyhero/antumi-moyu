@@ -12,6 +12,8 @@ export function useForumSession(host: PageHost) {
   const [busy, setBusy] = useState(false)
   const [awaiting, setAwaiting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Whether the first check has answered, either way: what reads as whom waits for it.
+  const [settled, setSettled] = useState(false)
   const generation = useRef(0)
   const checking = useRef(false)
   const focusTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -43,6 +45,7 @@ export function useForumSession(host: PageHost) {
       }
     } finally {
       checking.current = false
+      if (ticket === generation.current) setSettled(true)
       if (!quiet && ticket === generation.current) setBusy(false)
     }
   }, [host])
@@ -74,5 +77,5 @@ export function useForumSession(host: PageHost) {
     } catch (error) { setError(errorMessage(error)) }
     finally { setBusy(false) }
   }
-  return { account, busy, awaiting, error, check, login, logout }
+  return { account, settled, busy, awaiting, error, check, login, logout }
 }
