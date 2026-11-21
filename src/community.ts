@@ -91,7 +91,9 @@ export type ReplyResult = z.infer<typeof ReplyResult>
 export const LikeParams = z.object({
   topic: z.string().regex(/^\d{1,12}$/),
   post: z.string().regex(/^\d{1,16}$/),
-  liked: z.boolean()
+  liked: z.boolean(),
+  // V2EX thanks a topic and a reply at different addresses; linux.do's opening post is a post like any other.
+  opening: z.boolean().optional()
 })
 export const LikeResult = z.discriminatedUnion('state', [
   z.object({ state: z.literal('done'), liked: z.boolean(), likes: z.number().int().nonnegative().nullable() }),

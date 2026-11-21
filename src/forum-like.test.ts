@@ -28,6 +28,12 @@ describe('liking on linux.do', () => {
     expect(posts(h.requests)).toEqual([expect.objectContaining({ path: '/post_actions', headers: expect.objectContaining({ 'x-csrf-token': 'fresh' }), body: 'id=9&post_action_type_id=2&flag_topic=false' })])
   })
 
+  it('asks for the CSRF token as XHR, since Discourse answers anything else with its HTML shell', async () => {
+    const h = harness([response('{"csrf":"fresh"}'), response('{"id":9,"post_number":3}')])
+    await likeOutcome('linuxdo', { topic: '42', post: '9', liked: true }, h.context)
+    expect(h.requests[0]).toMatchObject({ path: '/session/csrf', headers: { 'x-requested-with': 'XMLHttpRequest', accept: 'application/json' } })
+  })
+
   it('undoes a like as a POST that says DELETE, since the bridge sends only GET and POST', async () => {
     const h = harness([response('{"csrf":"fresh"}'), response('{"id":9,"post_number":3,"reaction_users_count":3,"current_user_used_main_reaction":false}')])
     expect(await likeOutcome('linuxdo', { topic: '42', post: '9', liked: false }, h.context)).toEqual({ state: 'done', liked: false, likes: 3 })
@@ -67,6 +73,20 @@ describe('thanking on V2EX', () => {
     expect(await likeOutcome('v2ex', { topic: '42', post: '987', liked: true }, h.context)).toEqual({ state: 'done', liked: true, likes: null })
     expect(h.requests[0]).toMatchObject({ path: '/t/42' })
     expect(posts(h.requests)).toEqual([expect.objectContaining({ path: '/thank/reply/987?once=31337' })])
+  })
+
+  it('thanks the topic itself at its own address', async () => {
+    const h = harness([response(page), response('{"success":true}')])
+    expect(await likeOutcome('v2ex', { topic: '42', post: '42', liked: true, opening: true }, h.context)).toEqual({ state: 'done', liked: true, likes: null })
+    expect(posts(h.requests)).toEqual([expect.objectContaining({ path: '/thank/topic/42?once=31337' })])
+  })
+
+  it('reads whether the topic was thanked, and how often', async () => {
+    const html = (thanks: string) => `${account}<div id="Main"><div class="header"><h1>Topic</h1><a href="/member/author">author</a></div><div class="topic_content">Opening</div><div class="topic_buttons"><div class="fr topic_stats">1024 次点击 ∙ 3 人收藏 ∙ 5 人感谢</div>${thanks}</div></div>`
+    const read = async (thanks: string) => (await v2exSession(async () => response(html(thanks))).thread('42', 1, new AbortController().signal)).opening
+    expect(await read('<div id="topic_thank"><a href="#;" class="tb">感谢</a></div>')).toMatchObject({ id: '42', liked: false, likes: 5 })
+    expect(await read('<div id="topic_thank"><span class="topic_thanked">感谢已发送</span></div>')).toMatchObject({ liked: true })
+    expect(await read('')).not.toHaveProperty('liked')
   })
 
   it('never takes thanks back, and sends nothing trying', async () => {

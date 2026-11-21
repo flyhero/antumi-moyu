@@ -9,6 +9,7 @@ import { useNow, useReducedMotion } from '../use-environment'
 import { useReader } from '../use-reader'
 import { useStream } from '../use-stream'
 import { ChatHeader } from './ChatHeader'
+import { ImageViewer, type ViewedImage } from './ImageViewer'
 import { Composer } from './Composer'
 import { Conversation } from './Conversation'
 import { TopicList } from './TopicList'
@@ -37,6 +38,7 @@ export function App({ host }: { host: PageHost }) {
   }, session.account?.username ?? null)
   streamWanted.current = reader.saved.stream && !reduced
   const [notice, setNotice] = useState<string | null>(null)
+  const [viewed, setViewed] = useState<ViewedImage | null>(null)
   const input = useRef<HTMLTextAreaElement>(null)
   const escape = useMemo(() => doublePress(1000), [])
   const thread = reader.thread
@@ -64,6 +66,12 @@ export function App({ host }: { host: PageHost }) {
     const click = (event: MouseEvent) => {
       const target = event.target
       if (!(target instanceof Element)) return
+      // A picture opens large in the page, even one a forum wrapped in a link.
+      if (target instanceof HTMLImageElement && target.classList.contains('forum-image')) {
+        event.preventDefault()
+        if (event.type === 'click') setViewed({ src: target.src, full: target.getAttribute('data-full'), alt: target.alt })
+        return
+      }
       const link = target.closest('a')
       if (!link) return
       event.preventDefault()
@@ -251,6 +259,7 @@ export function App({ host }: { host: PageHost }) {
           canReply={session.account !== null && topic !== null}
         />
       </main>
+      {viewed && <ImageViewer image={viewed} words={words} onOpen={(url) => host.open(url)} onClose={() => setViewed(null)} />}
     </div>
   )
 }

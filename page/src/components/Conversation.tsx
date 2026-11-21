@@ -34,7 +34,7 @@ export function Conversation({ thread, notice, failure, words, locale, now, show
   onJump: (floor: number) => void
   canReply: boolean
   onReply: (post: Post) => void
-  likes: { view: (post: Post) => Post; likeable: (post: Post) => boolean; busy: (post: Post) => boolean; toggle: (post: Post) => void }
+  likes: { view: (post: Post, opening?: boolean) => Post; likeable: (post: Post) => boolean; busy: (post: Post, opening?: boolean) => boolean; toggle: (post: Post, opening?: boolean) => void }
 }) {
   const list = useReadingPosition(positionKey, thread, shown !== null, onPosition)
   const said = useRef<HTMLDivElement>(null)
@@ -64,7 +64,10 @@ export function Conversation({ thread, notice, failure, words, locale, now, show
         return (
           <Fragment key={page.page}>
             {page.page > 1 && <div className="chat-divider">{words.page(page.page)}</div>}
-            {page.opening && <OpeningMessage post={page.opening} page={page.page} words={words} locale={locale} now={now} showImages={showImages} />}
+            {page.opening && (
+              <OpeningMessage post={likes.view(page.opening, true)} page={page.page} community={page.topic.community} words={words} locale={locale} now={now} showImages={showImages}
+                canLike={likes.likeable(page.opening)} liking={likes.busy(page.opening, true)} onLike={(post) => likes.toggle(post, true)} />
+            )}
             {posts.map((post, index) => (
               <ReplyTurn
                 key={post.floor}
@@ -84,7 +87,7 @@ export function Conversation({ thread, notice, failure, words, locale, now, show
                 onReply={onReply}
                 canLike={likes.likeable(post)}
                 liking={likes.busy(post)}
-                onLike={likes.toggle}
+                onLike={(post) => likes.toggle(post)}
               />
             ))}
           </Fragment>

@@ -85,9 +85,13 @@ export function v2exSession(get: Get): Community {
       const authors = new Map(posts.map((post) => [post.floor, post.author]))
       for (const post of posts) post.replyTo = v2exReplyTarget(post.html, post.floor, authors)
       const more = $('a.page_normal').toArray().some((item) => Number($(item).text().trim()) > page)
-      const opening: Post | null = page === 1 ? { floor: 0, author, avatar,
+      // The topic's thank button is missing on one's own topic; once sent it becomes a note.
+      const topicThanks = $('#topic_thank').first()
+      const topicHearts = Number(/(\d+)\s*人感谢/.exec($('#Main .topic_stats, #Main .topic_buttons').text())?.[1] ?? 0)
+      const opening: Post | null = page === 1 ? { id, floor: 0, author, avatar,
         html: absoluteLinks([$('.topic_content').first().html() ?? '', ...$('#Main .subtle .topic_content').map((_i, item) => $(item).html() ?? '').get()].join('\n'), ORIGIN),
-        time: topic.time, replyTo: null, likes: null, byAuthor: true } : null
+        time: topic.time, replyTo: null, likes: topicHearts,
+        ...(topicThanks.length ? { liked: topicThanks.find('a').length === 0 } : {}), byAuthor: true } : null
       return { topic, opening, posts, page, more }
     }
   }

@@ -39,7 +39,7 @@ describe('forum sign-in and reply', () => {
   it('obtains fresh CSRF before posting a Discourse reply with the browser session', async () => {
     const h = harness([response('{"current_user":{"username":"alice"}}'), response('{"csrf":"fresh-csrf"}'), response('{"id":123}')])
     expect(await sendForumReply('linuxdo', { id: '42', content: 'Hello world' }, h.context)).toEqual({ state: 'sent', message: null })
-    expect(h.requests).toContainEqual(expect.objectContaining({ action: 'request', path: '/session/csrf' }))
+    expect(h.requests).toContainEqual(expect.objectContaining({ action: 'request', path: '/session/csrf', headers: expect.objectContaining({ 'x-requested-with': 'XMLHttpRequest' }) }))
     expect(h.requests.at(-1)).toMatchObject({ path: '/posts.json', method: 'POST', headers: { 'x-csrf-token': 'fresh-csrf' }, body: 'topic_id=42&raw=Hello+world' })
   })
 

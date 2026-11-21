@@ -267,7 +267,7 @@ export function mockThread(community: CommunityId, id: string, page: number, now
   })
   const all = [...replies.map(post), ...added]
   topic.replies = all.length
-  const openingPost: Post = { floor: first - 1, author: seed.author, avatar: avatars[seed.author] ?? null, html: opening, time: now - (replies.length + 3) * 7 * 60_000, replyTo: null, likes: 4, byAuthor: true }
+  const openingPost: Post = { id: community === 'v2ex' ? id : String(90_000 + first - 1), floor: first - 1, author: seed.author, avatar: avatars[seed.author] ?? null, html: opening, time: now - (replies.length + 3) * 7 * 60_000, replyTo: null, likes: 4, liked: false, byAuthor: true }
   if (community === 'v2ex') return { topic, opening: page === 1 ? openingPost : null, posts: page === 1 ? all : [], page, more: false }
   // Page 1 holds the opening post and the replies after it, 20 posts in all.
   const start = page === 1 ? 0 : PAGE - 1 + (page - 2) * PAGE

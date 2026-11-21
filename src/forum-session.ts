@@ -55,6 +55,13 @@ export function checkedSite(response: PluginBrowserResponse): string {
   return response.body
 }
 
+// Discourse answers a GET that is neither XHR nor asking for JSON with its HTML app shell.
+const DISCOURSE_XHR = { accept: 'application/json', 'x-requested-with': 'XMLHttpRequest' }
+export async function discourseCsrf(context: PluginPageContext): Promise<string | null> {
+  const csrf = z.object({ csrf: z.string().min(1) }).safeParse(parseJson(checkedSite(await siteRequest(context, '/session/csrf', { headers: DISCOURSE_XHR })), 'linux.do'))
+  return csrf.success ? csrf.data.csrf : null
+}
+
 export function v2exAccount(html: string): ForumAccount | null {
   const $ = load(html)
   const link = $('#Top .tools a[href^="/member/"]').first().attr('href')
@@ -87,13 +94,12 @@ export async function sendForumReply(community: CommunityId, params: unknown, co
   if (community === 'linuxdo') {
     const account = await forumAccount(community, context)
     if (!account) throw new ReplyError({ kind: 'login', message: '请先登录再回复' })
-    const response = await siteRequest(context, '/session/csrf')
-    const csrf = z.object({ csrf: z.string().min(1) }).safeParse(parseJson(checkedSite(response), 'linux.do'))
-    if (!csrf.success) throw new ReplyError({ kind: 'login', message: '未能取得发送所需的验证信息，请重新登录' })
+    const csrf = await discourseCsrf(context)
+    if (!csrf) throw new ReplyError({ kind: 'login', message: '未能取得发送所需的验证信息，请重新登录' })
     path = '/posts.json'
     body = new URLSearchParams({ topic_id: id, raw: content })
     if (target) body.set('reply_to_post_number', String(target.floor))
-    headers = { 'content-type': 'application/x-www-form-urlencoded', 'x-csrf-token': csrf.data.csrf, 'x-requested-with': 'XMLHttpRequest' }
+    headers = { 'content-type': 'application/x-www-form-urlencoded', 'x-csrf-token': csrf, ...DISCOURSE_XHR }
   } else {
     const response = await siteRequest(context, `/t/${id}`)
     const html = checkedSite(response)

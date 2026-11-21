@@ -104,8 +104,12 @@ function oneboxLink(aside: Element): HTMLParagraphElement {
   return paragraph
 }
 
-function picture(src: string): HTMLImageElement {
+// The full-size picture a forum links a thumbnail to (Discourse's lightbox), for the viewer.
+const FULL = 'data-full'
+
+function picture(src: string, full: string | null): HTMLImageElement {
   const image = element('img', 'forum-image')
+  if (full) image.setAttribute(FULL, full)
   image.setAttribute('referrerpolicy', 'no-referrer')
   image.decoding = 'async'
   image.src = src
@@ -113,10 +117,11 @@ function picture(src: string): HTMLImageElement {
 }
 
 // A picture folded to a chip until asked for: a forum's picture on screen gives the game away.
-function imageChip(src: string, alt: string, words: Words): HTMLButtonElement {
+function imageChip(src: string, alt: string, words: Words, full: string | null = null): HTMLButtonElement {
   const chip = element('button', 'forum-image-chip')
   chip.type = 'button'
   chip.setAttribute('data-image-chip', src)
+  if (full) chip.setAttribute(FULL, full)
   if (alt) chip.title = alt
   chip.append(element('span', 'forum-image-chip-icon'), element('span', '', words.image))
   return chip
@@ -124,7 +129,7 @@ function imageChip(src: string, alt: string, words: Words): HTMLButtonElement {
 
 export function expandImageChip(chip: Element): void {
   const src = chip.getAttribute('data-image-chip')
-  if (src && isHttpsUrl(src)) chip.replaceWith(picture(src))
+  if (src && isHttpsUrl(src)) chip.replaceWith(picture(src, chip.getAttribute(FULL)))
 }
 
 // An emoji that does not load is read as its name (":hugs:"); a picture, as a chip that cannot open.
@@ -149,17 +154,22 @@ function placeImage(image: HTMLImageElement, showImages: boolean, words: Words):
     image.className = 'forum-emoji'
     return
   }
+  const full = image.getAttribute(FULL)
   if (showImages) {
-    image.replaceWith(picture(src))
+    image.replaceWith(picture(src, full))
     return
   }
-  image.replaceWith(imageChip(src, image.getAttribute('alt') ?? '', words))
+  image.replaceWith(imageChip(src, image.getAttribute('alt') ?? '', words, full))
 }
 
 export function renderForumHtml(html: string, options: { showImages: boolean; words: Words }): DocumentFragment {
   const fragment = purify.sanitize(html, CONFIG)
   for (const drop of all(fragment, `[${MARK}="drop"]`)) drop.remove()
-  for (const wrapper of all(fragment, `[${MARK}="lightbox"]`)) wrapper.replaceWith(...Array.from(wrapper.childNodes))
+  for (const wrapper of all(fragment, `[${MARK}="lightbox"]`)) {
+    const href = wrapper.getAttribute('href')
+    if (href && isHttpsUrl(href)) for (const image of all(wrapper, 'img')) image.setAttribute(FULL, href)
+    wrapper.replaceWith(...Array.from(wrapper.childNodes))
+  }
   for (const onebox of all(fragment, `aside[${MARK}="onebox"]`)) onebox.replaceWith(oneboxLink(onebox))
   for (const quote of all(fragment, `aside[${MARK}="quote"]`)) quote.replaceWith(quoteFold(quote, options.words))
   for (const quote of all(fragment, 'blockquote')) quote.replaceWith(fold(options.words.quote, Array.from(quote.childNodes)))

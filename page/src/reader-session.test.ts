@@ -12,8 +12,11 @@ import { builtinCovers, coverFor } from './title-disguise'
 const topic: Topic = { community: 'linuxdo', id: '42', title: 'A long topic', author: 'bob', avatar: null, channel: null, replies: 60, time: null, url: 'https://linux.do/t/topic/42' }
 const another = { ...topic, id: '43', title: 'Another topic' }
 const third = { ...topic, id: '44', title: 'Third topic' }
+const pictured = '<p><a class="lightbox" href="https://cdn.example/original.png"><img src="https://cdn.example/thumb.png" alt="Shot" width="640" height="480"></a></p>'
+let withOpening = false
 function thread(one: Topic, page: number): Thread {
-  return { topic: one, opening: null, page, more: page < 3,
+  const opening = withOpening && page === 1 ? { id: one.community === 'v2ex' ? one.id : '100', floor: one.community === 'v2ex' ? 0 : 1, author: 'carol', avatar: null, html: pictured, time: null, replyTo: null, likes: 2, liked: false, byAuthor: true } : null
+  return { topic: one, opening, page, more: page < 3,
     posts: [page * 20 - 1, page * 20].map((floor) => ({ id: String(floor * 100), floor, author: 'bob', avatar: null, html: `<p>Reply ${floor}</p>`, time: null, replyTo: null, likes: 0, liked: false, byAuthor: false })) }
 }
 
@@ -101,7 +104,7 @@ async function mount(host: PageHost) {
 async function unmount() {
   if (root) { const old = root; await act(() => render(null, old)); old.remove(); root = null }
 }
-afterEach(async () => { vi.restoreAllMocks(); await unmount() })
+afterEach(async () => { vi.restoreAllMocks(); withOpening = false; await unmount() })
 function button(text: string): HTMLButtonElement {
   const found = [...document.querySelectorAll('button')].find((button) => button.textContent === text || button.getAttribute('aria-label') === text)
   if (!found) throw new Error(`Missing button: ${text}`)
@@ -311,6 +314,31 @@ describe('reader sessions', () => {
     await click('再点一次发送感谢')
     expect(f.calls.mock.calls.filter(([method]) => method === 'like')).toEqual([['like', { topic: '42', post: '2000', liked: true }]])
     expect(button('已感谢').disabled).toBe(true)
+  })
+
+  it.each<CommunityId>(['linuxdo', 'v2ex'])('likes the %s opening post as the topic', async (community) => {
+    withOpening = true
+    const f = fixture(null, community)
+    await mount(f.host); await openTopic()
+    const label = community === 'v2ex' ? '感谢 #0 @carol：花费 10 个铜币，发出后不能撤回' : '给 #1 @carol 点赞'
+    await click(label)
+    if (community === 'v2ex') await click('再点一次发送感谢')
+    expect(f.calls.mock.calls.filter(([method]) => method === 'like')).toEqual([['like', { topic: '42', post: community === 'v2ex' ? '42' : '100', liked: true, opening: true }]])
+    expect(button(community === 'v2ex' ? '已感谢' : '取消点赞').textContent).toBe('3')
+  })
+
+  it('opens a picture large in the page and closes it with Esc without leaving', async () => {
+    withOpening = true
+    const f = fixture({ stream: false, images: true })
+    await mount(f.host); await openTopic()
+    const image = document.querySelector<HTMLImageElement>('img.forum-image')
+    if (!image) throw new Error('Missing picture')
+    await act(async () => image.click()); await settle()
+    expect(document.querySelector('.image-viewer img')).not.toBeNull()
+    expect(f.host.open).not.toHaveBeenCalled()
+    await act(async () => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })) }); await settle()
+    expect(document.querySelector('.image-viewer')).toBeNull()
+    expect(f.host.leave).not.toHaveBeenCalled()
   })
 
   it('says why a like failed and keeps the heart as it was', async () => {

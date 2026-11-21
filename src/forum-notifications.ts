@@ -2,7 +2,7 @@ import { load } from 'cheerio/slim'
 import { z } from 'zod'
 import type { PluginPageContext } from '@antumi/plugin-sdk'
 import { NotificationPage, NotificationParams, NotificationReadParams, type CommunityId, type ForumNotification, type Topic } from './community.js'
-import { checkedSite, forumAccount, siteRequest, v2exAccount } from './forum-session.js'
+import { checkedSite, discourseCsrf, forumAccount, siteRequest, v2exAccount } from './forum-session.js'
 import { parseJson } from './json-body.js'
 
 const PAGE_SIZE = 20
@@ -130,11 +130,12 @@ export async function readForumNotification(community: CommunityId, params: unkn
   const { account, id } = NotificationReadParams.parse(params)
   if (community !== 'linuxdo') throw new Error('V2EX 查看通知列表时会自动清除未读计数')
   await requireAccount(community, account, context)
-  const csrf = z.object({ csrf: z.string().min(1) }).parse(parseJson(checkedSite(await siteRequest(context, '/session/csrf')), 'linux.do'))
+  const csrf = await discourseCsrf(context)
+  if (!csrf) throw new Error('未能取得验证信息，请重新登录')
   // Rails accepts its standard form override; the host bridge sends GET and POST.
   const body = new URLSearchParams({ _method: 'put', id }).toString()
   const response = await siteRequest(context, '/notifications/mark-read', { method: 'POST', body,
-    headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-csrf-token': csrf.csrf, 'x-requested-with': 'XMLHttpRequest' } })
+    headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-csrf-token': csrf, 'x-requested-with': 'XMLHttpRequest' } })
   const result = z.object({ success: z.literal('OK') }).safeParse(parseJson(checkedSite(response), 'linux.do'))
   if (!result.success) throw new Error('未能确认已读状态，请刷新通知后再试')
   return { read: true }

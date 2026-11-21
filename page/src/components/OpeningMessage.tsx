@@ -1,19 +1,24 @@
 import { useLayoutEffect, useRef, useState } from 'preact/hooks'
-import type { Post } from '../../../src/community'
+import type { CommunityId, Post } from '../../../src/community'
 import type { Words } from '../dictionary'
 import type { PageHost } from '../host'
 import { absoluteTime, relativeTime } from '../relative-time'
 import { ForumHtml } from './ForumHtml'
+import { LikeButton } from './LikeButton'
 
 // What the author wrote, as the user's own message: a bubble on the right. A long one is held to
 // about twelve lines, fading out, until opened.
-export function OpeningMessage({ post, page, words, locale, now, showImages }: {
+export function OpeningMessage({ post, page, community, words, locale, now, showImages, canLike, liking, onLike }: {
   post: Post
   page: number
+  community: CommunityId
   words: Words
   locale: PageHost['locale']
   now: number
   showImages: boolean
+  canLike: boolean
+  liking: boolean
+  onLike: (post: Post) => void
 }) {
   const [open, setOpen] = useState(false)
   const [long, setLong] = useState(false)
@@ -42,11 +47,10 @@ export function OpeningMessage({ post, page, words, locale, now, showImages }: {
           </button>
         </div>
       )}
-      {post.time !== null && (
-        <div className="chat-user-footer">
-          <span className="chat-message-time" title={absoluteTime(post.time)}>{relativeTime(post.time, now, locale)}</span>
-        </div>
-      )}
+      <div className="chat-user-footer">
+        <LikeButton post={post} community={community} words={words} canLike={canLike} liking={liking} onLike={onLike} />
+        {post.time !== null && <span className="chat-message-time" title={absoluteTime(post.time)}>{relativeTime(post.time, now, locale)}</span>}
+      </div>
     </div>
   )
 }

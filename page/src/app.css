@@ -345,6 +345,8 @@ body[data-resizing-list] { cursor: col-resize; user-select: none; }
 .chat-user-more { display: flex; justify-content: flex-end; margin-top: 2px; font-size: var(--chat-font-small); }
 .chat-user-footer { display: flex; align-items: center; justify-content: flex-end; gap: 4px; height: 22px; margin-top: 4px; opacity: 0; transition: opacity 0.12s; }
 .chat-entry:hover > .chat-user-footer { opacity: 1; }
+/* A heart with something to say stays in view; an empty one waits for the pointer like the time. */
+.chat-user-footer:has(.chat-turn-like[data-count], .chat-turn-like[data-liked], .chat-turn-like[data-asking], :focus-visible) { opacity: 1; }
 .chat-message-time { color: var(--text-3); font-size: var(--chat-font-small); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .chat-user-text > :first-child { margin-top: 0; }
 .chat-user-text > :last-child { margin-bottom: 0; }
@@ -510,7 +512,25 @@ body[data-resizing-list] { cursor: col-resize; user-select: none; }
 
 /* Emoji sit in the line at the size of its text; a picture opened in place keeps to the column. */
 .forum-emoji { width: auto; height: 1.25em; vertical-align: -0.25em; }
-.forum-image { display: block; max-width: min(100%, 480px); max-height: 360px; height: auto; margin: 4px 0; border-radius: var(--radius); }
+.forum-image { display: block; max-width: min(100%, 480px); max-height: 360px; height: auto; margin: 4px 0; border-radius: var(--radius); cursor: zoom-in; }
+
+/* A picture opened large: the page dimmed under it, a click anywhere or Esc puts it back. */
+.image-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 48px 24px 24px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(6px);
+  cursor: zoom-out;
+  animation: image-viewer-in 0.16s ease-out both;
+}
+.image-viewer-picture { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: var(--radius); box-shadow: 0 6px 24px color-mix(in srgb, var(--text) 18%, transparent); cursor: default; }
+.image-viewer-tools { position: absolute; top: 10px; right: 12px; display: flex; gap: 4px; cursor: default; }
+@keyframes image-viewer-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .image-viewer { animation: none; } }
 .forum-image-chip {
   display: inline-flex;
   align-items: center;
