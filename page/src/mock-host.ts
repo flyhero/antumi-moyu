@@ -90,6 +90,10 @@ export function mockHost(): PageHost {
         failedOnce.add(method)
         throw new Error(FAILURES[method] ?? '出错了')
       }
+      if (method === 'thread' && (failing === 'rate-limit' || failing === 'challenge') && !failedOnce.has('refusal')) {
+        failedOnce.add('refusal')
+        throw new Error(failing === 'challenge' ? '社区要求 Cloudflare 验证，请在插件登录浏览器中完成验证后检查状态' : '请求过于频繁，请 5 秒后再试')
+      }
       // Through JSON, as the real bridge carries it: what arrives is a copy, never the mock's own data.
       if (method === 'session') return JSON.parse(JSON.stringify(signedIn ? { username: 'preview-reader', unreadNotifications: unread } : null))
       if (method === 'login') { signedIn = true; return JSON.parse('{"opened":true}') }

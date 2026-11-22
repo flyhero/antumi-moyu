@@ -3,6 +3,7 @@ import { z } from 'zod'
 import type { PluginPageContext } from '@antumi/plugin-sdk'
 import { UploadParams, type CommunityId, type UploadResult } from './community.js'
 import { checkedSite, discourseCsrf, siteFailure, siteRequest } from './forum-session.js'
+import { forumRefusal } from './forum-refusal.js'
 
 const Uploaded = z.object({ short_url: z.string().regex(/^upload:\/\/[\w.-]+$/), width: z.number().int().positive().nullish(), height: z.number().int().positive().nullish() })
 const DiscourseErrors = z.object({ errors: z.array(z.string()).min(1) })
@@ -38,7 +39,11 @@ export async function uploadOutcome(community: CommunityId, params: unknown, con
     let body: unknown = null
     try { body = JSON.parse(response.body) } catch { /* a challenge page or a proxy's error */ }
     const errors = DiscourseErrors.safeParse(body)
-    if (errors.success) return { state: 'failed', failure: { kind: response.status === 429 ? 'rate-limit' : 'rejected', message: errors.data.errors.join('；') } }
+    if (errors.success) {
+      const refusal = forumRefusal(response)
+      if (refusal?.kind === 'challenge') return { state: 'failed', failure: { kind: 'login', message: refusal.message } }
+      return { state: 'failed', failure: { kind: response.status === 429 ? 'rate-limit' : 'rejected', message: errors.data.errors.join('；'), ...(refusal?.retryAfter ? { retryAfter: refusal.retryAfter } : {}) } }
+    }
     if (response.status === 413) return { state: 'failed', failure: { kind: 'rejected', message: '图片太大，linux.do 没有接受' } }
     checkedSite(response)
     const uploaded = Uploaded.safeParse(body)

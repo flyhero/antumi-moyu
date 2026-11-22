@@ -166,6 +166,11 @@ describe('forum sign-in and reply', () => {
 })
 
 describe('reply outcomes for the page', () => {
+  it('classifies a 429 challenge before posting as verification, not a timed rate limit', async () => {
+    const h = harness([response('<html><title>Just a moment...</title></html>', 429)])
+    expect(await replyOutcome('linuxdo', { id: '42', content: 'Reply' }, h.context)).toMatchObject({ state: 'failed', failure: { kind: 'login', message: expect.stringContaining('Cloudflare 验证') } })
+    expect(h.requests.some((request) => request.action === 'request' && request.method === 'POST')).toBe(false)
+  })
   it('returns the native Discourse floor for locating the new reply', async () => {
     const h = harness([response('{"current_user":{"username":"alice"}}'), response('{"csrf":"csrf"}'), response('{"id":123,"post_number":47}', 201)])
     expect(await replyOutcome('linuxdo', { id: '42', content: 'Reply' }, h.context)).toMatchObject({ state: 'sent', location: { floor: 47 } })

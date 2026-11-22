@@ -5,6 +5,7 @@ import { get as httpGet } from '../http.js'
 import type { Get, HttpResponse } from '../http.js'
 import { parseJson } from '../json-body.js'
 import { parseRss } from '../rss.js'
+import { forumRefusal } from '../forum-refusal.js'
 
 const ORIGIN = 'https://linux.do'
 const PAGE_SIZE = 20
@@ -34,21 +35,9 @@ const info: CommunityInfo = {
   ]
 }
 
-function retryAfterSeconds(headers: Record<string, string>): number | undefined {
-  const value = headers['retry-after']
-  const seconds = value && /^\d+$/.test(value) ? Number(value) : value ? Math.ceil((Date.parse(value) - Date.now()) / 1000) : NaN
-  return Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds, 86400) : undefined
-}
-
-// Cloudflare's challenge arrives as a 403 or a 200 page with this header or title. A plain 429 is
-// the forum's own rate limit, including when the built-in browser session is already logged in.
 function checked(response: HttpResponse, missing?: string): string {
-  const challenged = 'cf-mitigated' in response.headers || response.body.includes('Just a moment')
-  if (challenged) throw new Error('linux.do 暂时拦住了请求，过一会儿再试')
-  if (response.status === 429) {
-    const retry = retryAfterSeconds(response.headers)
-    throw new Error(retry !== undefined ? `请求过于频繁，请 ${retry} 秒后再试` : '请求过于频繁，请稍后再试')
-  }
+  const refusal = forumRefusal(response)
+  if (refusal) throw new Error(refusal.message)
   if (response.status === 403) throw new Error('linux.do 暂时拦住了请求，过一会儿再试')
   if (response.status === 404 && missing) throw new Error(missing)
   if (response.status !== 200) throw new Error(`linux.do 返回了 ${response.status}`)
@@ -172,6 +161,7 @@ export function linuxdo(get: Get = httpGet): Community {
     },
 
     async thread(id, page, signal, focus) {
+      let located: z.infer<typeof RawThread> | undefined
       if (focus?.floor || focus?.tail) {
         const path = focus.floor ? `/t/${id}/${focus.floor}.json` : `/t/topic/${id}.json`
         const near = RawThread.safeParse(parseJson(checked(await get(ORIGIN + path, signal)), 'linux.do'))
@@ -183,12 +173,20 @@ export function linuxdo(get: Get = httpGet): Community {
           const index = closest ? stream.indexOf(closest.id) : -1
           page = index >= 0 ? Math.floor(index / PAGE_SIZE) + 1 : 1
         }
+        // A floor lookup sometimes already contains the whole requested page.
+        const expected = stream.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+        const loaded = new Set(near.data.post_stream.posts.map((post) => post.id))
+        if (expected.length > 0 && expected.every((id) => loaded.has(id))) located = { ...near.data,
+          post_stream: { ...near.data.post_stream, posts: near.data.post_stream.posts.filter((post) => expected.includes(post.id)) } }
       }
       const query = page > 1 ? `?page=${page}` : ''
-      const body = checked(await get(`${ORIGIN}/t/topic/${id}.json${query}`, signal), '帖子不存在，或者需要登录才能看')
-      const parsed = RawThread.safeParse(parseJson(body, 'linux.do'))
-      if (!parsed.success) throw new Error(UNREADABLE)
-      const raw = parsed.data
+      if (!located) {
+        const body = checked(await get(`${ORIGIN}/t/topic/${id}.json${query}`, signal), '帖子不存在，或者需要登录才能看')
+        const parsed = RawThread.safeParse(parseJson(body, 'linux.do'))
+        if (!parsed.success) throw new Error(UNREADABLE)
+        located = parsed.data
+      }
+      const raw = located
 
       const visible = raw.post_stream.posts.filter(readable)
       const first = page === 1 ? visible.find((post) => post.post_number === 1) : undefined

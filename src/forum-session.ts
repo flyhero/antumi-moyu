@@ -3,6 +3,7 @@ import { z } from 'zod'
 import type { PluginBrowserResponse, PluginPageContext } from '@antumi/plugin-sdk'
 import { ReplyParams, type CommunityId, type ForumAccount, type ReplyFailure, type ReplyResult } from './community.js'
 import { parseJson } from './json-body.js'
+import { forumRefusal } from './forum-refusal.js'
 
 class ReplyError extends Error {
   constructor(readonly failure: ReplyFailure) { super(failure.message) }
@@ -39,17 +40,9 @@ export async function siteRequest(context: PluginPageContext, path: string, opti
 }
 
 export function checkedSite(response: PluginBrowserResponse): string {
-  if (response.status === 429) {
-    const value = response.headers['retry-after']
-    const seconds = value && /^\d+$/.test(value) ? Number(value) : value ? Math.ceil((Date.parse(value) - Date.now()) / 1000) : NaN
-    const retryAfter = Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds, 86400) : undefined
-    throw new ReplyError({
-      kind: 'rate-limit',
-      message: retryAfter !== undefined ? `请求过于频繁，请 ${retryAfter} 秒后再试` : '请求过于频繁，请稍后再试',
-      ...(retryAfter ? { retryAfter } : {})
-    })
-  }
-  if (response.status === 401 || response.status === 403 || /Just a moment|cf-chl-/.test(response.body)) throw new ReplyError({ kind: 'login', message: '登录已过期或站点要求验证，请在浏览器完成登录后检查状态' })
+  const refusal = forumRefusal(response)
+  if (refusal) throw new ReplyError({ ...refusal, kind: refusal.kind === 'challenge' ? 'login' : 'rate-limit' })
+  if (response.status === 401 || response.status === 403) throw new ReplyError({ kind: 'login', message: '登录已过期或站点要求验证，请在浏览器完成登录后检查状态' })
   if (response.status >= 300 && response.status < 400) throw new ReplyError({ kind: 'login', message: '站点要求重新登录，请打开登录页面' })
   if (response.status !== 200) throw new Error(`站点返回了 ${response.status}`)
   return response.body

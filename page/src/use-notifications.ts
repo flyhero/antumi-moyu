@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { z } from 'zod'
 import { NotificationPage, NotificationUpdate, type CommunityId, type NotificationBootstrap, type ForumAccount, type ForumNotification } from '../../src/community'
-import { forumCooldownRemaining, noteForumRefusal } from './forum-cooldown'
+import { forumAccessState, forumCooldownRemaining, noteForumRefusal, onForumAccessChange } from './forum-cooldown'
 import type { PageHost } from './host'
 import { callReader, errorMessage } from './reader-client'
 
@@ -107,7 +107,7 @@ export function useNotifications(host: PageHost, community: CommunityId | null, 
     const schedule = (delay: number, afterFailure = false) => {
       clearTimeout(timer)
       due = null
-      if (stopped) return
+      if (stopped || forumAccessState()) return
       due = Date.now() + delay
       backingOff = afterFailure
       timer = setTimeout(poll, delay)
@@ -115,11 +115,7 @@ export function useNotifications(host: PageHost, community: CommunityId | null, 
     const poll = async () => {
       due = null
       if (stopped || running || document.visibilityState === 'hidden') return
-      const wait = forumCooldownRemaining()
-      if (wait > 0) {
-        schedule(wait, true)
-        return
-      }
+      if (forumAccessState()) return
       running = true
       try {
         const update = NotificationUpdate.parse(await callReader(host, 'notificationWatch', {
@@ -166,9 +162,14 @@ export function useNotifications(host: PageHost, community: CommunityId | null, 
     }
     document.addEventListener('visibilitychange', resume)
     if (community === 'linuxdo') window.addEventListener('focus', resume)
+    const unsubscribe = onForumAccessChange(() => {
+      if (forumAccessState()) { clearTimeout(timer); due = null }
+      else resume()
+    })
     schedule(community === 'v2ex' ? V2EX_INTERVAL : 0)
     return () => {
       stopped = true
+      unsubscribe()
       clearTimeout(timer)
       document.removeEventListener('visibilitychange', resume)
       if (community === 'linuxdo') window.removeEventListener('focus', resume)

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { ForumAccount } from '../../src/community'
-import { forumCoolingDown, noteForumRefusal } from './forum-cooldown'
+import { forumAccessState, noteForumRefusal } from './forum-cooldown'
 import type { PageHost } from './host'
 import { callReader, errorMessage } from './reader-client'
 
 // Switching windows focuses the page in bursts. Wait until that stops, and skip a check that just ran.
 export const focusCheckDelay = 1_000
+export const focusCheckInterval = 30_000
 
 export function useForumSession(host: PageHost) {
   const [account, setAccount] = useState<ForumAccount | null>(null)
@@ -26,7 +27,7 @@ export function useForumSession(host: PageHost) {
     cancelFocusCheck()
     if (checking.current) return
     // Quiet focus checks must not keep hitting a forum that just asked us to wait.
-    if (quiet && forumCoolingDown()) return
+    if (quiet && forumAccessState()) return
     checking.current = true
     checkedAt.current = Date.now()
     const ticket = generation.current
@@ -53,7 +54,7 @@ export function useForumSession(host: PageHost) {
     void check(true)
     const focus = () => {
       cancelFocusCheck()
-      if (Date.now() - checkedAt.current < focusCheckDelay) return
+      if (Date.now() - checkedAt.current < focusCheckInterval) return
       focusTimer.current = setTimeout(() => { focusTimer.current = undefined; void check(true) }, focusCheckDelay)
     }
     window.addEventListener('focus', focus)

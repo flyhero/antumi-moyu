@@ -1,24 +1,52 @@
-// After linux.do refuses a request, quiet background work (session focus checks, list refresh,
-// notification polls) waits out the same cooldown so they do not keep burning the allowance.
+import type { ReplyFailure } from '../../src/community'
 
 const DEFAULT_MS = 60_000
-let until = 0
-
-export function clearForumCooldown(): void {
-  until = 0
+export type ForumAccess = { kind: 'rate-limit' | 'challenge'; until: number; message: string }
+let access: ForumAccess | null = null
+const listeners = new Set<() => void>()
+const changed = () => { for (const listener of listeners) listener() }
+export const forumAccessState = () => access
+export function onForumAccessChange(listener: () => void): () => void {
+  listeners.add(listener)
+  return () => { listeners.delete(listener) }
 }
 
-export function noteForumRefusal(message: string, now = Date.now()): void {
-  const match = /请 (\d+) 秒后再试/.exec(message)
-  if (match) {
-    until = Math.max(until, now + Number(match[1]) * 1000)
+export function clearForumCooldown(): void {
+  access = null
+  changed()
+}
+
+export function noteForumRefusal(message: string, now = Date.now(), failure?: { kind?: string; retryAfter?: number }): void {
+  if (/Cloudflare 验证/.test(message)) {
+    if (access?.kind === 'challenge') return
+    access = { kind: 'challenge', message, until: 0 }
+    changed()
     return
   }
-  if (/请求过于频繁|暂时拦住了/.test(message)) until = Math.max(until, now + DEFAULT_MS)
+  if (access?.kind === 'challenge') return
+  const match = /请 (\d+) 秒后再试/.exec(message)
+  const delay = failure?.retryAfter ? failure.retryAfter * 1000 : match ? Number(match[1]) * 1000 : DEFAULT_MS
+  if (!match && failure?.kind !== 'rate-limit' && !/请求过于频繁|暂时拦住了/.test(message)) return
+  const until = now + delay
+  if (access && access.until >= until) return
+  access = { kind: 'rate-limit', until, message }
+  changed()
 }
 
 export function forumCooldownRemaining(now = Date.now()): number {
-  return Math.max(0, until - now)
+  return access?.kind === 'challenge' ? DEFAULT_MS : Math.max(0, (access?.until ?? 0) - now)
+}
+
+// A local refusal proves the backend was never called, so a blocked send has a known outcome.
+export class ForumRequestBlocked extends Error {
+  readonly failure: ReplyFailure
+  constructor() {
+    const challenge = access?.kind === 'challenge'
+    const seconds = Math.ceil(forumCooldownRemaining() / 1000)
+    super(challenge ? '社区访问已暂停，请在插件登录浏览器完成验证后继续浏览'
+      : seconds > 0 ? `社区正在冷却，还需等待 ${seconds} 秒` : '社区访问已暂停，请点击继续浏览')
+    this.failure = { kind: challenge ? 'login' : 'rate-limit', message: this.message, ...(!challenge && seconds > 0 ? { retryAfter: seconds } : {}) }
+  }
 }
 
 export function forumCoolingDown(now = Date.now()): boolean {

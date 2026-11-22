@@ -4,6 +4,7 @@ import type { PageHost } from './host'
 import type { PageState } from './use-page-state'
 import { scopeKey, type Draft } from './saved-state'
 import { callReader, errorMessage } from './reader-client'
+import { ForumRequestBlocked } from './forum-cooldown'
 
 const EMPTY: Draft = { text: '', target: null, uncertain: false }
 export type PendingReply = { id: number; text: string; target: ReplyTarget | null; author: string; time: number }
@@ -76,7 +77,7 @@ export function useReply(host: PageHost, topic: Topic | null, username: string |
       if (current.current === key) onSent(topic, result)
     } catch (error) {
       // A lost bridge response may hide a completed POST too.
-      failed({ kind: 'unconfirmed', message: errorMessage(error) })
+      failed(error instanceof ForumRequestBlocked ? error.failure : { kind: 'unconfirmed', message: errorMessage(error) })
     } finally {
       locked.current = false
       if (alive.current) setSending(false)

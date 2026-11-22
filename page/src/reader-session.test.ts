@@ -6,7 +6,9 @@ import type { CommunityId, NotificationPage, ReplyResult, Thread, Topic } from '
 import { App } from './components/App'
 import type { PageHost } from './host'
 import { readSavedState } from './saved-state'
-import { focusCheckDelay } from './use-forum-session'
+import { focusCheckDelay, focusCheckInterval } from './use-forum-session'
+import { clearForumCooldown, noteForumRefusal } from './forum-cooldown'
+import { forumRequests } from './forum-requests'
 import { builtinCovers, coverFor } from './title-disguise'
 
 const topic: Topic = { community: 'linuxdo', id: '42', title: 'A long topic', author: 'bob', avatar: null, channel: null, replies: 60, time: null, url: 'https://linux.do/t/topic/42' }
@@ -105,7 +107,7 @@ async function mount(host: PageHost) {
 async function unmount() {
   if (root) { const old = root; await act(() => render(null, old)); old.remove(); root = null }
 }
-afterEach(async () => { vi.restoreAllMocks(); withOpening = false; await unmount() })
+afterEach(async () => { vi.restoreAllMocks(); withOpening = false; await unmount(); clearForumCooldown() })
 function button(text: string): HTMLButtonElement {
   const found = [...document.querySelectorAll('button')].find((button) => button.textContent === text || button.getAttribute('aria-label') === text)
   if (!found) throw new Error(`Missing button: ${text}`)
@@ -247,7 +249,7 @@ describe('reader sessions', () => {
     vi.useFakeTimers()
     vi.setSystemTime(now)
     try {
-      await act(() => { vi.advanceTimersByTime(focusCheckDelay) })
+      await act(() => { vi.advanceTimersByTime(focusCheckInterval) })
       await act(() => {
         window.dispatchEvent(new Event('focus'))
         vi.advanceTimersByTime(focusCheckDelay)
@@ -459,6 +461,21 @@ describe('reader sessions', () => {
     expect(f.calls.mock.calls.filter(([method]) => method === 'reply')).toHaveLength(1)
   })
 
+  it('does not mark a locally blocked reply as an unknown write or lose its saved draft', async () => {
+    const f = fixture()
+    const client = forumRequests(f.host, 0)
+    try {
+      await mount(client.host); await openTopic(); await type('Keep this draft')
+      await act(() => noteForumRefusal('请求过于频繁，请 10 秒后再试'))
+      await click('发送回复')
+      expect(f.calls.mock.calls.filter(([method]) => method === 'reply')).toHaveLength(0)
+      expect(input().value).toBe('Keep this draft')
+      expect(f.saved().drafts['linuxdo:alice:42']).toEqual({ text: 'Keep this draft', target: null, uncertain: false })
+      expect(document.body.textContent).not.toContain('确认未发出，允许重发')
+      expect(button('继续浏览').disabled).toBe(true)
+    } finally { client.dispose() }
+  })
+
   it('does not erase another topic’s draft or navigate it when an earlier send completes', async () => {
     const f = fixture(); const pending = f.holdReply()
     await mount(f.host); await openTopic('Another topic'); await type('Keep B')
@@ -582,7 +599,7 @@ describe('my notifications', () => {
     vi.useFakeTimers()
     vi.setSystemTime(now)
     try {
-      await act(() => { vi.advanceTimersByTime(focusCheckDelay) })
+      await act(() => { vi.advanceTimersByTime(focusCheckInterval) })
       await act(async () => {
         window.dispatchEvent(new Event('focus'))
         await vi.advanceTimersByTimeAsync(focusCheckDelay)

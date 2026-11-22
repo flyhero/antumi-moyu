@@ -21,6 +21,8 @@ import { usePageState } from '../use-page-state'
 import { useLikes } from '../use-likes'
 import { useReply } from '../use-reply'
 import { useUpload } from '../use-upload'
+import { clearForumCooldown, forumAccessState, onForumAccessChange } from '../forum-cooldown'
+import { ForumAccessNotice } from './ForumAccessNotice'
 
 function isTyping(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
@@ -32,6 +34,8 @@ export function App({ host }: { host: PageHost }) {
   const now = useNow()
   const stream = useStream()
   const streamWanted = useRef(false)
+  const [access, setAccess] = useState(forumAccessState)
+  useEffect(() => onForumAccessChange(() => setAccess(forumAccessState())), [])
   const session = useForumSession(host)
   const store = usePageState(host)
   const reader = useReader(host, store, (thread, restoring) => {
@@ -220,9 +224,16 @@ export function App({ host }: { host: PageHost }) {
             else host.open(item.url)
           }} />} />
         <SessionBar session={session} words={words} />
+        {reader.community && <ForumAccessNotice words={words} busy={session.busy}
+          onVerify={() => void session.login()} onResume={() => {
+            clearForumCooldown()
+            void session.check()
+            reader.retry()
+          }} />}
         <Conversation
           key={topic ? `${topic.community}:${topic.id}` : 'none'}
           thread={thread}
+          paused={access !== null}
           pendingReplies={reply.pending}
           notice={notice}
           failure={failure}

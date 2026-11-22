@@ -4,7 +4,7 @@ import { h, render } from 'preact'
 import { act } from 'preact/test-utils'
 import { clearForumCooldown, noteForumRefusal } from './forum-cooldown'
 import type { PageHost } from './host'
-import { focusCheckDelay, useForumSession } from './use-forum-session'
+import { focusCheckDelay, focusCheckInterval, useForumSession } from './use-forum-session'
 
 function harness() {
   const calls = vi.fn(async (method: string) => {
@@ -51,7 +51,7 @@ describe('forum session focus check', () => {
 
   it('collapses a burst of focus into one check after it settles', async () => {
     const { calls } = await mount()
-    await act(() => { vi.advanceTimersByTime(focusCheckDelay) })
+    await act(() => { vi.advanceTimersByTime(focusCheckInterval) })
     await act(() => {
       window.dispatchEvent(new Event('focus'))
       vi.advanceTimersByTime(focusCheckDelay - 1)
@@ -65,17 +65,17 @@ describe('forum session focus check', () => {
 
   it('lets a manual check run immediately and drops the pending focus check', async () => {
     const { calls } = await mount()
-    await act(() => { vi.advanceTimersByTime(focusCheckDelay) })
+    await act(() => { vi.advanceTimersByTime(focusCheckInterval) })
     await act(() => { window.dispatchEvent(new Event('focus')) })
     await act(async () => { root.querySelector('button')?.click() })
     expect(sessions(calls)).toHaveLength(2)
-    await act(() => { vi.advanceTimersByTime(focusCheckDelay) })
+    await act(() => { vi.advanceTimersByTime(focusCheckInterval) })
     expect(sessions(calls)).toHaveLength(2)
   })
 
   it('drops a pending focus check when the page closes', async () => {
     const { calls } = await mount()
-    await act(() => { vi.advanceTimersByTime(focusCheckDelay) })
+    await act(() => { vi.advanceTimersByTime(focusCheckInterval) })
     await act(() => { window.dispatchEvent(new Event('focus')) })
     await act(() => { render(null, root) })
     await act(() => { vi.advanceTimersByTime(focusCheckDelay) })
@@ -84,12 +84,20 @@ describe('forum session focus check', () => {
 
   it('skips quiet focus checks while the forum cooldown is active', async () => {
     const { calls } = await mount()
-    await act(() => { vi.advanceTimersByTime(focusCheckDelay) })
+    await act(() => { vi.advanceTimersByTime(focusCheckInterval) })
     noteForumRefusal('请求过于频繁，请 30 秒后再试', Date.now())
     await act(() => {
       window.dispatchEvent(new Event('focus'))
       vi.advanceTimersByTime(focusCheckDelay)
     })
+    expect(sessions(calls)).toHaveLength(1)
+  })
+
+  it('does not recheck the account on repeated window switches within 30 seconds', async () => {
+    const { calls } = await mount()
+    for (let index = 0; index < 10; index++) {
+      await act(() => { window.dispatchEvent(new Event('focus')); vi.advanceTimersByTime(focusCheckDelay) })
+    }
     expect(sessions(calls)).toHaveLength(1)
   })
 })

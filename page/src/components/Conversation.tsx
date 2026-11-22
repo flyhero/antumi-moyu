@@ -15,8 +15,9 @@ import { ReplyTurn } from './ReplyTurn'
 import { WorkingLine } from './WorkingLine'
 
 // The thread as a conversation: the opening post as the user's message, each reply as a turn.
-export function Conversation({ thread, pendingReplies, notice, failure, words, locale, now, showImages, disguiseAvatars, shown, onTyped, onRetry, onLoadMore, onJump, canReply, onReply, likes, onLoadPrevious, positionKey, onPosition }: {
+export function Conversation({ thread, paused, pendingReplies, notice, failure, words, locale, now, showImages, disguiseAvatars, shown, onTyped, onRetry, onLoadMore, onJump, canReply, onReply, likes, onLoadPrevious, positionKey, onPosition }: {
   thread: ThreadState | null
+  paused: boolean
   pendingReplies: readonly PendingReply[]
   notice: string | null
   // What failed outside the thread (the communities, the list).
@@ -103,8 +104,8 @@ export function Conversation({ thread, pendingReplies, notice, failure, words, l
       })}
       {thread && thread.loading !== null && <WorkingLine phase="thinking" words={words} />}
       {streaming && <WorkingLine phase="replying" words={words} />}
-      {thread?.error && <ChatNotice text={thread.error.message} words={words} onRetry={onRetry} />}
-      {failure !== null && <ChatNotice text={failure} words={words} onRetry={onRetry} />}
+      {!paused && thread?.error && <ChatNotice text={thread.error.message} words={words} onRetry={onRetry} />}
+      {!paused && failure !== null && <ChatNotice text={failure} words={words} onRetry={onRetry} />}
       {!streaming && thread && thread.loading === null && !thread.error && last?.more && (
         <div className="chat-more-row">
           <button type="button" className="chat-more" onClick={onLoadMore}><ChevronDownIcon />{words.loadMore}</button>

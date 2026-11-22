@@ -5,6 +5,7 @@ import { likedOf, likesOf, RawPost } from './communities/linuxdo.js'
 import { LikeParams, type CommunityId, type LikeResult } from './community.js'
 import { checkedSite, discourseCsrf, siteFailure, siteRequest, v2exAccount } from './forum-session.js'
 import { parseJson } from './json-body.js'
+import { forumRefusal } from './forum-refusal.js'
 
 const DiscourseErrors = z.object({ errors: z.array(z.string()).min(1), extras: z.object({ wait_seconds: z.number().optional() }).nullish() })
 
@@ -34,8 +35,11 @@ async function likeOnLinuxdo({ post, liked }: z.infer<typeof LikeParams>, contex
   try { data = JSON.parse(response.body) } catch { /* a challenge page or an empty body */ }
   const errors = DiscourseErrors.safeParse(data)
   if (errors.success) {
+    const refusal = forumRefusal(response)
+    if (refusal?.kind === 'challenge') return { state: 'failed', failure: { kind: 'login', message: refusal.message } }
     const wait = errors.data.extras?.wait_seconds
-    if (response.status === 429) return { state: 'failed', failure: { kind: 'rate-limit', message: errors.data.errors.join('；'), ...(wait && wait >= 1 ? { retryAfter: Math.min(Math.ceil(wait), 86400) } : {}) } }
+    const retryAfter = refusal?.retryAfter ?? (wait && wait >= 1 ? Math.min(Math.ceil(wait), 86400) : undefined)
+    if (response.status === 429) return { state: 'failed', failure: { kind: 'rate-limit', message: errors.data.errors.join('；'), ...(retryAfter ? { retryAfter } : {}) } }
     return { state: 'failed', failure: { kind: 'rejected', message: errors.data.errors.join('；') } }
   }
   checkedSite(response)

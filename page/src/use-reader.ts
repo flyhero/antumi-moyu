@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import type { CommunityId, CommunityInfo, ReplyLocation, Thread, Topic } from '../../src/community'
-import { forumCooldownRemaining, noteForumRefusal } from './forum-cooldown'
+import { forumAccessState, noteForumRefusal } from './forum-cooldown'
 import type { PageHost } from './host'
 import { callReader, errorMessage } from './reader-client'
 import { markRead, readKey, savePosition, scopeKey, type ReadingPosition } from './saved-state'
@@ -86,11 +86,7 @@ export function useReader(host: PageHost, store: PageState, onOpened: (thread: T
   useEffect(() => {
     if (!communityId || !channelId || list.key !== `${account ?? ''}:${communityId}:${channelId}` || list.expiresAt === null) return
     return refreshOnExpiry(list.expiresAt, () => {
-      const wait = forumCooldownRemaining()
-      if (wait > 0) {
-        setList((previous) => previous.expiresAt === null ? previous : { ...previous, expiresAt: Date.now() + wait })
-        return
-      }
+      if (forumAccessState()) return
       loadList(communityId, channelId, true)
     })
   }, [communityId, channelId, list.key, list.expiresAt, loadList, account])

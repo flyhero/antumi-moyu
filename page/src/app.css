@@ -405,6 +405,22 @@ body[data-resizing-list] { cursor: col-resize; user-select: none; }
 }
 .chat-pending-text { white-space: pre-wrap; }
 
+.forum-access-notice {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--fill);
+  color: var(--text-muted);
+  font-size: var(--chat-font-small);
+}
+.forum-access-notice[data-challenge] { color: var(--danger); }
+.forum-access-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
 /* A reply: no bubble, laid on the page. */
 .chat-assistant { max-width: 100%; overflow-wrap: anywhere; line-height: 1.7; }
 .chat-caret {

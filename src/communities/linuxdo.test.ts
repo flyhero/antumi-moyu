@@ -193,6 +193,22 @@ describe('linuxdo thread', () => {
 })
 
 describe('linuxdo reply location', () => {
+  it('reuses the floor lookup when it already contains the complete aligned page', async () => {
+    const stream = Array.from({ length: 25 }, (_, index) => index + 100)
+    const { get, urls } = recorder({ status: 200, headers: {}, body: topicJson(stream.slice(20).map((id, index) => post(id, index + 80)), stream) })
+    const result = await linuxdo(get).thread('7', 1, signal, { floor: 80 })
+    expect(result.page).toBe(2)
+    expect(result.posts).toHaveLength(5)
+    expect(urls).toEqual(['https://linux.do/t/7/80.json'])
+  })
+
+  it('reuses the first read when the tail is in a single-page topic', async () => {
+    const { get, urls } = recorder({ status: 200, headers: {}, body: topicJson([post(11, 1), post(12, 2)], [11, 12]) })
+    const result = await linuxdo(get).thread('7', 1, signal, { tail: true })
+    expect(result.page).toBe(1)
+    expect(result.opening?.floor).toBe(1)
+    expect(urls).toEqual(['https://linux.do/t/topic/7.json'])
+  })
   it('locates the correct page by stream position, not a floor with deleted gaps', async () => {
     const stream = Array.from({ length: 25 }, (_, index) => index + 100)
     const urls: string[] = []
@@ -219,7 +235,7 @@ describe('linuxdo reply location', () => {
 
 describe('linuxdo errors', () => {
   const challenge = fixture('cloudflare-challenge.html')
-  const blocked = 'linux.do 暂时拦住了请求，过一会儿再试'
+  const blocked = 'Cloudflare 验证'
 
   it('names the Cloudflare challenge on a list and on a thread', async () => {
     await expect(linuxdo(answer(challenge, 403, { 'cf-mitigated': 'challenge' })).list('latest', signal)).rejects.toThrow(blocked)
