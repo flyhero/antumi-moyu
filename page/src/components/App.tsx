@@ -15,7 +15,8 @@ import { Conversation } from './Conversation'
 import { TopicList } from './TopicList'
 import { SessionBar } from './SessionBar'
 import { useForumSession } from '../use-forum-session'
-import { coversFor } from '../title-disguise'
+import { coverFor, coversFor } from '../title-disguise'
+import { readKey } from '../saved-state'
 import { usePageState } from '../use-page-state'
 import { useLikes } from '../use-likes'
 import { useReply } from '../use-reply'
@@ -183,6 +184,8 @@ export function App({ host }: { host: PageHost }) {
   const failure = reader.communitiesError ?? reader.list.error
   const topic = thread?.topic ?? null
   const busy = (thread?.loading ?? null) !== null || streaming
+  const covers = coversFor(host.locale, reader.saved.titleCovers)
+  const headerCover = topic && reader.saved.disguiseTitles ? coverFor(readKey(topic.community, topic.id), covers) : null
 
   return (
     <div className="app">
@@ -202,14 +205,14 @@ export function App({ host }: { host: PageHost }) {
         onRefresh={reader.refreshList}
         listWidth={store.state.listWidth}
         disguiseTitles={reader.saved.disguiseTitles}
-        titleCovers={coversFor(host.locale, reader.saved.titleCovers)}
+        titleCovers={covers}
         savedTitleCovers={reader.saved.titleCovers}
         onDisguiseTitles={reader.setDisguiseTitles}
         onTitleCovers={reader.setTitleCovers}
         onListWidth={(width) => store.update((state) => state.listWidth === width ? state : { ...state, listWidth: width })}
       />
       <main className="chat-view">
-        <ChatHeader topic={topic} busy={busy} words={words} onRefresh={refresh} onOpen={openInBrowser} onJump={jump} onLeave={() => host.leave()}
+        <ChatHeader topic={topic} cover={headerCover} busy={busy} words={words} onRefresh={refresh} onOpen={openInBrowser} onJump={jump} onLeave={() => host.leave()}
           notifications={<NotificationsMenu inbox={notifications} words={words} locale={host.locale} now={now} onSelect={(item) => {
             setNotice(null)
             stream.finish()

@@ -686,6 +686,19 @@ describe('my notifications', () => {
     }
   })
 
+  it('disguises the open topic in the header as its list row, real title only on hover', async () => {
+    const f = fixture({ stream: false, disguiseTitles: true }); await mount(f.host)
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-topic="linuxdo:42"]')?.click()); await settle()
+    const header = document.querySelector('.chat-header .conversation-title')
+    const cover = coverFor('linuxdo:42', builtinCovers('zh-CN'))
+    expect(header?.hasAttribute('data-title-cover')).toBe(true)
+    expect(header?.querySelector('.title-cover')?.textContent).toBe(cover)
+    expect(document.querySelector('[data-topic="linuxdo:42"] .title-cover')?.textContent).toBe(cover)
+    await click('标题伪装：开')
+    expect(document.querySelector('.chat-header .conversation-title')?.hasAttribute('data-title-cover')).toBe(false)
+    expect(document.querySelector('.chat-header .conversation-title .title-cover')).toBeNull()
+  })
+
   it('resizes the topic list from its edge and restores the default on a double-click', async () => {
     const previous = window.innerWidth
     window.innerWidth = 1280

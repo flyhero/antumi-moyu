@@ -158,6 +158,8 @@ body[data-resizing-list] { cursor: col-resize; user-select: none; }
 /* The stand-in stays until the pointer or keyboard is on the row. */
 .task-row[data-title-cover]:not(:hover):not(:focus-visible) .title-real { display: none; }
 .task-row[data-title-cover]:is(:hover, :focus-visible) .title-cover { display: none; }
+.conversation-title[data-title-cover]:not(:hover) .title-real { display: none; }
+.conversation-title[data-title-cover]:hover .title-cover { display: none; }
 .task-row[data-read]:not([aria-current='true']) .task-row-meta { color: var(--text-3); }
 
 /* The mark before a conversation's name: a ring while nothing goes on. */
