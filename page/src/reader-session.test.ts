@@ -385,12 +385,59 @@ describe('reader sessions', () => {
     expect(() => button('插入图片（也可以粘贴或拖进输入框）')).toThrow()
   })
 
-  it('preserves the current thread when a reply awaits moderation', async () => {
+  it('shows a moderated submission in the conversation and scrolls to its review badge without fetching a floor', async () => {
     const f = fixture(); f.result({ state: 'pending', message: 'Waiting for review' })
-    await mount(f.host); await openTopic(); await type('Review me'); await click('发送回复')
+    const scroll = vi.spyOn(Element.prototype, 'scrollIntoView')
+    await mount(f.host); await openTopic(); await click('回复 #19 @bob'); await type('Review me\n<img src=x onerror=alert(1)>'); await click('发送回复')
     expect(f.calls.mock.calls.filter(([method]) => method === 'thread')).toHaveLength(1)
-    expect(document.body.textContent).toContain('Waiting for review')
+    const row = document.querySelector('.chat-pending-reply')
+    expect(row?.querySelector('[role="status"]')?.textContent).toBe('等待社区审核')
+    expect(row?.querySelector('.chat-turn-head-name')?.textContent).toBe('alice')
+    expect(row?.querySelector('.chat-reply-chip')?.textContent).toBe('回复 #19 @bob')
+    expect(row?.querySelector('.chat-pending-text')?.textContent).toBe('Review me\n<img src=x onerror=alert(1)>')
+    expect(row?.querySelector('img, [data-reading-floor], .chat-turn-head-model, button')).toBeNull()
+    expect(row?.hasAttribute('data-reading-floor')).toBe(false)
+    expect(scroll.mock.contexts).toContain(row)
+    expect(scroll).toHaveBeenCalledWith({ block: 'start' })
+    expect(document.querySelector('.reply-feedback')).toBeNull()
+    expect(input().value).toBe('')
     expect(f.saved().drafts['linuxdo:alice:42']).toBeUndefined()
+    expect(JSON.stringify(f.host.state)).not.toContain('Review me')
+  })
+
+  it('keeps multiple moderated replies under their topic across typing, reading more and switching topics', async () => {
+    const f = fixture(); f.result({ state: 'pending', message: null })
+    await mount(f.host); await openTopic(); await type('First pending reply'); await enter()
+    await type('Second pending reply'); await click('发送回复'); await type('Next draft')
+    await click('加载更多回复')
+    expect(document.querySelectorAll('.chat-pending-reply')).toHaveLength(2)
+    await openTopic('Another topic')
+    expect(document.querySelector('.chat-pending-reply')).toBeNull()
+    await type('Other topic reply'); await enter()
+    expect(document.querySelectorAll('.chat-pending-reply')).toHaveLength(1)
+    await openTopic()
+    expect([...document.querySelectorAll('.chat-pending-text')].map((row) => row.textContent)).toEqual(['First pending reply', 'Second pending reply'])
+    expect(input().value).toBe('Next draft')
+  })
+
+  it('retains a queued reply in its original topic when the submit completes after navigation', async () => {
+    const f = fixture(); const pending = f.holdReply()
+    await mount(f.host); await openTopic(); await type('Submitted to A'); await click('发送回复'); await openTopic('Another topic')
+    await act(async () => pending.resolve({ state: 'pending', message: null })); await settle()
+    expect(document.querySelector('.chat-pending-reply')).toBeNull()
+    expect(document.querySelector('.conversation-title')?.textContent).toBe('Another topic')
+    await openTopic()
+    expect(document.querySelector('.chat-pending-text')?.textContent).toBe('Submitted to A')
+  })
+
+  it('hides moderated reply text after switching accounts', async () => {
+    const f = fixture(); f.result({ state: 'pending', message: null })
+    await mount(f.host); await openTopic(); await type('Private queued reply'); await enter()
+    f.account('bob'); await click('检查登录状态'); await openTopic()
+    expect(document.querySelector('.chat-pending-reply')).toBeNull()
+    expect(document.body.textContent).not.toContain('Private queued reply')
+    f.account('alice'); await click('检查登录状态'); await openTopic()
+    expect(document.querySelector('.chat-pending-text')?.textContent).toBe('Private queued reply')
   })
 
   it('opens a saved page directly and restores its offset, without reading all earlier pages', async () => {

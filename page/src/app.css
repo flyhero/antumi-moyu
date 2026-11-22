@@ -392,6 +392,19 @@ body[data-resizing-list] { cursor: col-resize; user-select: none; }
 .chat-turn-head-model { min-width: 0; overflow: hidden; color: var(--text-3); text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .chat-turn-head-model::before { content: '·'; margin-right: 8px; }
 
+.chat-pending-replies { margin-top: 8px; }
+.chat-pending-reply .chat-turn-head { flex-wrap: wrap; }
+.chat-pending-badge {
+  padding: 1px 7px;
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--danger);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.chat-pending-text { white-space: pre-wrap; }
+
 /* A reply: no bubble, laid on the page. */
 .chat-assistant { max-width: 100%; overflow-wrap: anywhere; line-height: 1.7; }
 .chat-caret {

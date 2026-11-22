@@ -6,6 +6,8 @@ import { scopeKey, type Draft } from './saved-state'
 import { callReader, errorMessage } from './reader-client'
 
 const EMPTY: Draft = { text: '', target: null, uncertain: false }
+export type PendingReply = { id: number; text: string; target: ReplyTarget | null; author: string; time: number }
+const NO_PENDING: readonly PendingReply[] = []
 type Feedback = { key: string; text: string; error: boolean; failure?: ReplyFailure }
 
 export function useReply(host: PageHost, topic: Topic | null, username: string | null, store: PageState, onSent: (topic: Topic, result: ReplyResult) => void) {
@@ -17,6 +19,10 @@ export function useReply(host: PageHost, topic: Topic | null, username: string |
   const alive = useRef(true)
   useEffect(() => () => { alive.current = false }, [])
   const [feedback, setFeedback] = useState<Feedback | null>(null)
+  // The queue response has no public post id or floor. Keep submitted text in this page's memory,
+  // scoped like drafts, without pretending a later topic read confirms its moderation status.
+  const [pending, setPending] = useState<Record<string, readonly PendingReply[]>>({})
+  const nextPendingId = useRef(0)
   const [cooldown, setCooldown] = useState<{ key: string; until: number } | null>(null)
   useEffect(() => {
     if (!cooldown) return
@@ -63,7 +69,10 @@ export function useReply(host: PageHost, topic: Topic | null, username: string |
         delete drafts[key]
         return { ...state, drafts }
       })
-      setFeedback({ key, text: result.message ?? '', error: false })
+      if (result.state === 'pending') {
+        const submitted: PendingReply = { id: ++nextPendingId.current, text, target, author: username, time: Date.now() }
+        setPending((before) => ({ ...before, [key]: [...(before[key] ?? []), submitted] }))
+      } else setFeedback({ key, text: result.message ?? '', error: false })
       if (current.current === key) onSent(topic, result)
     } catch (error) {
       // A lost bridge response may hide a completed POST too.
@@ -73,5 +82,5 @@ export function useReply(host: PageHost, topic: Topic | null, username: string |
       if (alive.current) setSending(false)
     }
   }
-  return { text, target, uncertain, cooling, setText, setTarget, allowResend, send, sending, feedback: feedback?.key === key ? feedback : null }
+  return { text, target, uncertain, cooling, setText, setTarget, allowResend, send, sending, pending: pending[key] ?? NO_PENDING, feedback: feedback?.key === key ? feedback : null }
 }

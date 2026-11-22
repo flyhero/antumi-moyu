@@ -223,6 +223,7 @@ export function App({ host }: { host: PageHost }) {
         <Conversation
           key={topic ? `${topic.community}:${topic.id}` : 'none'}
           thread={thread}
+          pendingReplies={reply.pending}
           notice={notice}
           failure={failure}
           words={words}

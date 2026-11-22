@@ -6,15 +6,18 @@ import type { Post } from '../../../src/community'
 import type { Words } from '../dictionary'
 import type { PageHost } from '../host'
 import type { ThreadState } from '../use-reader'
+import type { PendingReply } from '../use-reply'
 import { AssistantNotice, ChatNotice } from './ChatNotice'
 import { ChevronDownIcon } from './icons'
 import { OpeningMessage } from './OpeningMessage'
+import { PendingReplyTurn } from './PendingReplyTurn'
 import { ReplyTurn } from './ReplyTurn'
 import { WorkingLine } from './WorkingLine'
 
 // The thread as a conversation: the opening post as the user's message, each reply as a turn.
-export function Conversation({ thread, notice, failure, words, locale, now, showImages, disguiseAvatars, shown, onTyped, onRetry, onLoadMore, onJump, canReply, onReply, likes, onLoadPrevious, positionKey, onPosition }: {
+export function Conversation({ thread, pendingReplies, notice, failure, words, locale, now, showImages, disguiseAvatars, shown, onTyped, onRetry, onLoadMore, onJump, canReply, onReply, likes, onLoadPrevious, positionKey, onPosition }: {
   thread: ThreadState | null
+  pendingReplies: readonly PendingReply[]
   notice: string | null
   // What failed outside the thread (the communities, the list).
   failure: string | null
@@ -38,6 +41,11 @@ export function Conversation({ thread, notice, failure, words, locale, now, show
 }) {
   const list = useReadingPosition(positionKey, thread, shown !== null, onPosition)
   const said = useRef<HTMLDivElement>(null)
+  const submitted = useRef<HTMLDivElement>(null)
+  const latestPending = pendingReplies.at(-1)?.id
+  useEffect(() => {
+    submitted.current?.lastElementChild?.scrollIntoView({ block: 'start' })
+  }, [latestPending])
   useEffect(() => {
     said.current?.scrollIntoView({ block: 'nearest' })
   }, [notice])
@@ -102,6 +110,10 @@ export function Conversation({ thread, notice, failure, words, locale, now, show
           <button type="button" className="chat-more" onClick={onLoadMore}><ChevronDownIcon />{words.loadMore}</button>
         </div>
       )}
+      {thread && pendingReplies.length > 0 && <div ref={submitted} className="chat-pending-replies">
+        {pendingReplies.map((reply) => <PendingReplyTurn key={reply.id} reply={reply} community={thread.topic.community}
+          disguiseAvatars={disguiseAvatars} words={words} locale={locale} now={now} />)}
+      </div>}
       {notice && (
         <div ref={said} className="chat-said">
           <ChatNotice text={notice} words={words} />
