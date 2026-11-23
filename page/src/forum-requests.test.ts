@@ -73,6 +73,10 @@ describe('shared forum requests', () => {
 
   it('cancels queued work on refusal and requires manual resume even after the cooldown expires', async () => {
     const f = fixture(async (method) => { if (method === 'list') throw new Error('请求过于频繁，请 15 秒后再试'); return {} })
+    // Signed in (the account check answered with an account), so the check itself pauses too.
+    await f.host.call('session')
+    await vi.advanceTimersByTimeAsync(1000)
+    f.calls.mockClear()
     const failed = f.host.call('list').catch((error: Error) => error.message)
     const queued = f.host.call('thread').catch((error) => error)
     expect(await failed).toContain('15 秒')
@@ -89,19 +93,51 @@ describe('shared forum requests', () => {
 
   it('keeps the browser verification entry available while pausing all forum traffic', async () => {
     const f = fixture()
-    noteForumRefusal('社区要求 Cloudflare 验证')
+    await f.host.call('session')
+    f.calls.mockClear()
+    noteForumRefusal('browser', '社区要求 Cloudflare 验证')
     await vi.advanceTimersByTimeAsync(86400_000)
     await expect(f.host.call('session')).rejects.toBeInstanceOf(ForumRequestBlocked)
     await f.host.call('login')
     await f.host.call('logout')
     expect(f.calls.mock.calls.map(([method]) => method)).toEqual(['login', 'logout'])
-    expect(forumAccessState()?.kind).toBe('challenge')
+    expect(forumAccessState('browser')?.kind).toBe('challenge')
+  })
+
+  it('never lets a refused account check hold up a reader who is not signed in', async () => {
+    const f = fixture(async (method) => {
+      if (method === 'session') throw new Error('社区要求 Cloudflare 验证，请在插件登录浏览器中完成验证后检查状态')
+      return method === 'communities' ? [{ id: 'v2ex' }] : []
+    })
+    await f.host.call('communities')
+    await expect(f.host.call('session')).rejects.toThrow('Cloudflare 验证')
+    expect(forumAccessState('browser')).toBeNull()
+    expect(forumAccessState('public')).toBeNull()
+    await f.host.call('list', { community: 'v2ex', channel: 'hot', authenticated: false })
+    // Asked again, the check still runs: signed out, it is how one would sign in.
+    await expect(f.host.call('session')).rejects.toThrow('Cloudflare 验证')
+    expect(f.calls.mock.calls.map(([method]) => method)).toEqual(['communities', 'session', 'list', 'session'])
+  })
+
+  it('pauses anonymous reading alone, and waits out a challenge there rather than asking to verify', async () => {
+    const f = fixture(async (method, params) => {
+      if (method === 'list' && Reflect.get(Object(params), 'authenticated') === false) throw new Error('社区要求 Cloudflare 验证，请在插件登录浏览器中完成验证后检查状态')
+      return method === 'communities' ? [{ id: 'v2ex' }] : []
+    })
+    await f.host.call('communities')
+    await expect(f.host.call('list', { community: 'v2ex', channel: 'hot', authenticated: false })).rejects.toThrow()
+    expect(forumAccessState('public')).toMatchObject({ kind: 'rate-limit', until: 60_000 })
+    expect(forumAccessState('browser')).toBeNull()
+    await expect(f.host.call('thread', { community: 'v2ex', id: '1', authenticated: false })).rejects.toBeInstanceOf(ForumRequestBlocked)
+    await f.host.call('thread', { community: 'v2ex', id: '1', authenticated: true })
+    await f.host.call('session')
+    expect(f.calls.mock.calls.map(([method]) => method)).toEqual(['communities', 'list', 'thread', 'session'])
   })
 
   it('observes structured failures without retrying a write or losing the advertised wait', async () => {
     const f = fixture(async () => ({ state: 'failed', failure: { kind: 'rate-limit', message: 'Slow down', retryAfter: 13 } }))
     expect(await f.host.call('reply')).toMatchObject({ state: 'failed' })
-    expect(forumAccessState()).toMatchObject({ kind: 'rate-limit', until: 13_000 })
+    expect(forumAccessState('browser')).toMatchObject({ kind: 'rate-limit', until: 13_000 })
     await vi.advanceTimersByTimeAsync(30_000)
     expect(f.calls).toHaveBeenCalledTimes(1)
   })

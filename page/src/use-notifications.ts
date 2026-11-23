@@ -59,7 +59,7 @@ export function useNotifications(host: PageHost, community: CommunityId | null, 
       if (current.current === key && generation.current === ticket) {
         failedPage.current = page
         const message = errorMessage(error)
-        noteForumRefusal(message)
+        noteForumRefusal('browser', message)
         setInbox((before) => ({ ...before, loading: false, error: message }))
       }
     } finally {
@@ -107,7 +107,7 @@ export function useNotifications(host: PageHost, community: CommunityId | null, 
     const schedule = (delay: number, afterFailure = false) => {
       clearTimeout(timer)
       due = null
-      if (stopped || forumAccessState()) return
+      if (stopped || forumAccessState('browser')) return
       due = Date.now() + delay
       backingOff = afterFailure
       timer = setTimeout(poll, delay)
@@ -115,7 +115,7 @@ export function useNotifications(host: PageHost, community: CommunityId | null, 
     const poll = async () => {
       due = null
       if (stopped || running || document.visibilityState === 'hidden') return
-      if (forumAccessState()) return
+      if (forumAccessState('browser')) return
       running = true
       try {
         const update = NotificationUpdate.parse(await callReader(host, 'notificationWatch', {
@@ -136,18 +136,18 @@ export function useNotifications(host: PageHost, community: CommunityId | null, 
           failures += 1
           // A login answer may mean the stream's address or key went stale: read it again next time.
           if (update.state === 'login') bootstrap = undefined
-          if (update.message) noteForumRefusal(update.message)
+          if (update.message) noteForumRefusal('browser', update.message)
           const delay = Math.max(
             update.retryAfter ? update.retryAfter * 1000 : Math.min(1000 * 2 ** Math.min(failures, 7), RETRY_MAX),
-            forumCooldownRemaining()
+            forumCooldownRemaining('browser')
           )
           schedule(delay, true)
         }
       } catch (error) {
         if (!stopped) {
           failures += 1
-          noteForumRefusal(errorMessage(error))
-          schedule(Math.max(Math.min(1000 * 2 ** Math.min(failures, 7), RETRY_MAX), forumCooldownRemaining()), true)
+          noteForumRefusal('browser', errorMessage(error))
+          schedule(Math.max(Math.min(1000 * 2 ** Math.min(failures, 7), RETRY_MAX), forumCooldownRemaining('browser')), true)
         }
       } finally {
         running = false
@@ -163,7 +163,7 @@ export function useNotifications(host: PageHost, community: CommunityId | null, 
     document.addEventListener('visibilitychange', resume)
     if (community === 'linuxdo') window.addEventListener('focus', resume)
     const unsubscribe = onForumAccessChange(() => {
-      if (forumAccessState()) { clearTimeout(timer); due = null }
+      if (forumAccessState('browser')) { clearTimeout(timer); due = null }
       else resume()
     })
     schedule(community === 'v2ex' ? V2EX_INTERVAL : 0)

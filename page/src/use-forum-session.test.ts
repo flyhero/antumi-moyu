@@ -85,7 +85,7 @@ describe('forum session focus check', () => {
   it('skips quiet focus checks while the forum cooldown is active', async () => {
     const { calls } = await mount()
     await act(() => { vi.advanceTimersByTime(focusCheckInterval) })
-    noteForumRefusal('请求过于频繁，请 30 秒后再试', Date.now())
+    noteForumRefusal('browser', '请求过于频繁，请 30 秒后再试', Date.now())
     await act(() => {
       window.dispatchEvent(new Event('focus'))
       vi.advanceTimersByTime(focusCheckDelay)

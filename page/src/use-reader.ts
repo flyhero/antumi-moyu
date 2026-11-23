@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import type { CommunityId, CommunityInfo, ReplyLocation, Thread, Topic } from '../../src/community'
-import { forumAccessState, noteForumRefusal } from './forum-cooldown'
+import { forumAccessState, noteForumRefusal, type ForumScope } from './forum-cooldown'
 import type { PageHost } from './host'
 import { callReader, errorMessage } from './reader-client'
 import { markRead, readKey, savePosition, scopeKey, type ReadingPosition } from './saved-state'
@@ -14,6 +14,8 @@ import { refreshOnExpiry } from './refresh-on-expiry'
 // refreshes once when its cache expires; failed requests wait for the user to retry.
 
 const LIST_TTL = 3 * 60_000
+// Signed in, reading goes through the sign-in browser; signed out, by the backend's anonymous road.
+export const readingScope = (account: string | null): ForumScope => account === null ? 'public' : 'browser'
 const THREAD_TTL = 5 * 60_000
 
 type Destination = ReplyLocation & { postId?: string; last?: boolean }
@@ -71,7 +73,7 @@ export function useReader(host: PageHost, store: PageState, onOpened: (thread: T
       (error: unknown) => {
         if (ticket !== tickets.current.list) return
         const message = errorMessage(error)
-        noteForumRefusal(message)
+        noteForumRefusal(readingScope(account), message)
         setList((previous) => ({ ...previous, key, loading: false, error: message }))
       }
     )
@@ -86,7 +88,7 @@ export function useReader(host: PageHost, store: PageState, onOpened: (thread: T
   useEffect(() => {
     if (!communityId || !channelId || list.key !== `${account ?? ''}:${communityId}:${channelId}` || list.expiresAt === null) return
     return refreshOnExpiry(list.expiresAt, () => {
-      if (forumAccessState()) return
+      if (forumAccessState(readingScope(account))) return
       loadList(communityId, channelId, true)
     })
   }, [communityId, channelId, list.key, list.expiresAt, loadList, account])
@@ -124,7 +126,7 @@ export function useReader(host: PageHost, store: PageState, onOpened: (thread: T
       (error: unknown) => {
         if (ticket !== tickets.current.thread) return
         const message = errorMessage(error)
-        noteForumRefusal(message)
+        noteForumRefusal(readingScope(account), message)
         setThread((previous) => (previous ? { ...previous, loading: null, error: { page, message } } : previous))
       }
     )

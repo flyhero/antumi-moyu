@@ -22,6 +22,7 @@ import { useLikes } from '../use-likes'
 import { useReply } from '../use-reply'
 import { useUpload } from '../use-upload'
 import { clearForumCooldown, forumAccessState, forumCanResume, onForumAccessChange } from '../forum-cooldown'
+import { readingScope } from '../use-reader'
 import { ForumAccessNotice } from './ForumAccessNotice'
 
 function isTyping(target: EventTarget | null): boolean {
@@ -34,17 +35,18 @@ export function App({ host }: { host: PageHost }) {
   const now = useNow()
   const stream = useStream()
   const streamWanted = useRef(false)
-  const [access, setAccess] = useState(forumAccessState)
-  useEffect(() => onForumAccessChange(() => setAccess(forumAccessState())), [])
+  const session = useForumSession(host)
+  const scope = readingScope(session.account?.username ?? null)
+  const [, setAccessChanged] = useState(0)
+  useEffect(() => onForumAccessChange(() => setAccessChanged((n) => n + 1)), [])
+  const access = forumAccessState(scope)
   // A rate limit's wait ending changes nothing in the pause itself; render again so the buttons wake.
-  const [, setWaited] = useState(0)
   useEffect(() => {
     if (access?.kind !== 'rate-limit' || access.until <= Date.now()) return
-    const timer = setTimeout(() => setWaited((n) => n + 1), access.until - Date.now() + 50)
+    const timer = setTimeout(() => setAccessChanged((n) => n + 1), access.until - Date.now() + 50)
     return () => clearTimeout(timer)
   }, [access])
-  const refreshWaits = access !== null && !forumCanResume()
-  const session = useForumSession(host)
+  const refreshWaits = access !== null && !forumCanResume(scope)
   const store = usePageState(host)
   const reader = useReader(host, store, (thread, restoring) => {
     if (!restoring && streamWanted.current) stream.start(thread.posts.length)
@@ -146,12 +148,12 @@ export function App({ host }: { host: PageHost }) {
   // would do nothing visible. It resumes instead, as the notice's button does; a rate limit still
   // waits out its time, with the buttons disabled meanwhile.
   const resumeForum = () => {
-    clearForumCooldown()
+    clearForumCooldown(scope)
     void session.check()
   }
   const throughPause = (action: () => void) => () => {
-    if (forumAccessState()) {
-      if (!forumCanResume()) return
+    if (forumAccessState(scope)) {
+      if (!forumCanResume(scope)) return
       resumeForum()
     }
     action()
@@ -248,7 +250,7 @@ export function App({ host }: { host: PageHost }) {
             else host.open(item.url)
           }} />} />
         <SessionBar session={session} words={words} />
-        {reader.community && <ForumAccessNotice words={words} busy={session.busy}
+        {reader.community && <ForumAccessNotice scope={scope} words={words} busy={session.busy}
           onVerify={() => void session.login()} onResume={() => {
             resumeForum()
             reader.retry()

@@ -10,6 +10,8 @@ export const focusCheckInterval = 30_000
 
 export function useForumSession(host: PageHost) {
   const [account, setAccount] = useState<ForumAccount | null>(null)
+  const signedIn = useRef(false)
+  signedIn.current = account !== null
   const [busy, setBusy] = useState(false)
   const [awaiting, setAwaiting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -27,7 +29,7 @@ export function useForumSession(host: PageHost) {
     cancelFocusCheck()
     if (checking.current) return
     // Quiet focus checks must not keep hitting a forum that just asked us to wait.
-    if (quiet && forumAccessState()) return
+    if (quiet && forumAccessState('browser')) return
     checking.current = true
     checkedAt.current = Date.now()
     const ticket = generation.current
@@ -41,7 +43,8 @@ export function useForumSession(host: PageHost) {
     } catch (error) {
       if (ticket === generation.current) {
         const message = errorMessage(error)
-        noteForumRefusal(message)
+        // Signed out, the sign-in browser is only where one would sign in: anonymous reading goes on.
+        if (signedIn.current) noteForumRefusal('browser', message)
         setError(message)
       }
     } finally {
