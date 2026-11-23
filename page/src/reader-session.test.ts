@@ -476,6 +476,35 @@ describe('reader sessions', () => {
     } finally { client.dispose() }
   })
 
+  it('refreshes through a verification pause instead of swallowing the click', async () => {
+    const f = fixture()
+    const client = forumRequests(f.host, 0)
+    try {
+      await mount(client.host); await openTopic()
+      await act(() => noteForumRefusal('社区要求 Cloudflare 验证，请在插件登录浏览器中完成验证后检查状态'))
+      f.calls.mockClear()
+      await click('刷新帖子列表')
+      expect(f.calls.mock.calls.map(([method]) => method)).toEqual(expect.arrayContaining(['session', 'list']))
+      expect(document.querySelector('.forum-access-notice')).toBeNull()
+      // Still refused: the notice says the check ran, so the click visibly did something.
+      await act(() => noteForumRefusal('社区要求 Cloudflare 验证，请在插件登录浏览器中完成验证后检查状态'))
+      expect(document.body.textContent).toContain('刚检查过，社区仍要求验证')
+    } finally { client.dispose() }
+  })
+
+  it('disables refreshing while a rate limit is waited out', async () => {
+    const f = fixture()
+    const client = forumRequests(f.host, 0)
+    try {
+      await mount(client.host); await openTopic()
+      await act(() => noteForumRefusal('请求过于频繁，请 1 秒后再试'))
+      expect(button('刷新帖子列表').disabled).toBe(true)
+      expect(button('刷新（r）').disabled).toBe(true)
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 1100)) })
+      expect(button('刷新帖子列表').disabled).toBe(false)
+    } finally { client.dispose() }
+  })
+
   it('does not erase another topic’s draft or navigate it when an earlier send completes', async () => {
     const f = fixture(); const pending = f.holdReply()
     await mount(f.host); await openTopic('Another topic'); await type('Keep B')

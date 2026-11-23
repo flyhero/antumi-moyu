@@ -15,7 +15,7 @@ import { TitleCoverEditor } from './TitleCoverEditor'
 // The sidebar, as Antumi's list of conversations: the community and channel on top, then one row a
 // topic, its title on one line and what it is under it. The open one floats as a card; one read
 // before is quieter.
-export function TopicList({ communities, community, channel, list, openTopic, read, words, locale, now, listWidth, disguiseTitles, titleCovers, savedTitleCovers, onDisguiseTitles, onTitleCovers, onListWidth, onCommunity, onChannel, onOpen, onRefresh }: {
+export function TopicList({ communities, community, channel, list, openTopic, read, words, locale, now, listWidth, disguiseTitles, titleCovers, savedTitleCovers, onDisguiseTitles, onTitleCovers, onListWidth, onCommunity, onChannel, onOpen, onRefresh, refreshWaits }: {
   communities: CommunityInfo[] | null
   community: CommunityInfo | null
   channel: Channel | null
@@ -38,6 +38,8 @@ export function TopicList({ communities, community, channel, list, openTopic, re
   onChannel: (id: string) => void
   onOpen: (topic: Topic) => void
   onRefresh: () => void
+  // A rate limit is being waited out: refreshing would only be refused.
+  refreshWaits: boolean
 }) {
   const topics = list.topics ?? []
   return (
@@ -61,7 +63,7 @@ export function TopicList({ communities, community, channel, list, openTopic, re
             aria-label={list.loading ? words.refreshingList : words.refreshList}
             title={list.loading ? words.refreshingList : words.refreshList}
             aria-busy={list.loading}
-            disabled={list.loading || !channel}
+            disabled={list.loading || !channel || refreshWaits}
             onClick={onRefresh}
           ><RefreshIcon /></button>
           <ChannelPicker channels={community?.channels ?? []} current={channel} words={words} onPick={onChannel} />

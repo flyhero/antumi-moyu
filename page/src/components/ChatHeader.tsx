@@ -7,10 +7,11 @@ import { FloorJump } from './FloorJump'
 // The conversation's header: its status mark, the topic's title, then who and where in muted text,
 // and the reading tools on the right. With titles disguised it shows the list row's stand-in, and
 // the real title only while pointed at, as the row does.
-export function ChatHeader({ topic, cover, busy, words, onRefresh, onOpen, onJump, onLeave, notifications }: {
+export function ChatHeader({ topic, cover, busy, refreshWaits, words, onRefresh, onOpen, onJump, onLeave, notifications }: {
   topic: Topic | null
   cover: string | null
   busy: boolean
+  refreshWaits: boolean
   words: Words
   onRefresh: () => void
   onOpen: () => void
@@ -33,7 +34,7 @@ export function ChatHeader({ topic, cover, busy, words, onRefresh, onOpen, onJum
       <div className="toolbar">
         {notifications}
         {topic && <FloorJump key={`${topic.community}:${topic.id}`} words={words} onJump={onJump} />}
-        <button type="button" className="tool-button" aria-label={words.refresh} title={words.refresh} onClick={onRefresh}><RefreshIcon /></button>
+        <button type="button" className="tool-button" aria-label={words.refresh} title={words.refresh} disabled={refreshWaits} onClick={onRefresh}><RefreshIcon /></button>
         <button type="button" className="tool-button" aria-label={words.openInBrowser} title={words.openInBrowser} disabled={!topic} onClick={onOpen}><ExternalIcon /></button>
         <button type="button" className="tool-button" aria-label={words.leave} title={words.leave} onClick={onLeave}><LeaveIcon /></button>
       </div>

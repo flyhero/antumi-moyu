@@ -1,9 +1,14 @@
 import type { ReplyFailure } from '../../src/community'
 
 const DEFAULT_MS = 60_000
-export type ForumAccess = { kind: 'rate-limit' | 'challenge'; until: number; message: string }
+// again: the forum refused once more right after the user resumed, so the notice can say the
+// check did run and verification is still owed, rather than look as if the click did nothing.
+export type ForumAccess = { kind: 'rate-limit' | 'challenge'; until: number; message: string; again?: boolean }
+const AGAIN_MS = 30_000
 let access: ForumAccess | null = null
+let resumedAt = 0
 const listeners = new Set<() => void>()
+const justResumed = (now: number) => resumedAt > 0 && now >= resumedAt && now - resumedAt < AGAIN_MS
 const changed = () => { for (const listener of listeners) listener() }
 export const forumAccessState = () => access
 export function onForumAccessChange(listener: () => void): () => void {
@@ -11,15 +16,21 @@ export function onForumAccessChange(listener: () => void): () => void {
   return () => { listeners.delete(listener) }
 }
 
-export function clearForumCooldown(): void {
+export function clearForumCooldown(now = Date.now()): void {
   access = null
+  resumedAt = now
   changed()
+}
+
+// Whether the user may try the forum again now: a challenge on their word, a rate limit once its wait is over.
+export function forumCanResume(now = Date.now()): boolean {
+  return access !== null && (access.kind === 'challenge' || access.until <= now)
 }
 
 export function noteForumRefusal(message: string, now = Date.now(), failure?: { kind?: string; retryAfter?: number }): void {
   if (/Cloudflare 验证/.test(message)) {
     if (access?.kind === 'challenge') return
-    access = { kind: 'challenge', message, until: 0 }
+    access = { kind: 'challenge', message, until: 0, ...(justResumed(now) ? { again: true } : {}) }
     changed()
     return
   }
@@ -29,7 +40,7 @@ export function noteForumRefusal(message: string, now = Date.now(), failure?: { 
   if (!match && failure?.kind !== 'rate-limit' && !/请求过于频繁|暂时拦住了/.test(message)) return
   const until = now + delay
   if (access && access.until >= until) return
-  access = { kind: 'rate-limit', until, message }
+  access = { kind: 'rate-limit', until, message, ...(justResumed(now) ? { again: true } : {}) }
   changed()
 }
 

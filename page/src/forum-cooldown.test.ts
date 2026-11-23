@@ -1,8 +1,22 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { clearForumCooldown, forumCooldownRemaining, forumCoolingDown, noteForumRefusal } from './forum-cooldown'
+import { clearForumCooldown, forumAccessState, forumCanResume, forumCooldownRemaining, forumCoolingDown, noteForumRefusal } from './forum-cooldown'
 
 describe('forum cooldown', () => {
   afterEach(() => clearForumCooldown())
+
+  it('marks a refusal that comes straight back after the user resumed', () => {
+    noteForumRefusal('社区要求 Cloudflare 验证', 0)
+    expect(forumAccessState()?.again).toBeUndefined()
+    expect(forumCanResume(0)).toBe(true)
+    clearForumCooldown(1_000)
+    noteForumRefusal('社区要求 Cloudflare 验证', 2_000)
+    expect(forumAccessState()?.again).toBe(true)
+    clearForumCooldown(3_000)
+    noteForumRefusal('请求过于频繁，请 5 秒后再试', 3_000 + 60_000)
+    expect(forumAccessState()?.again).toBeUndefined()
+    expect(forumCanResume(3_000 + 60_000)).toBe(false)
+    expect(forumCanResume(3_000 + 65_000)).toBe(true)
+  })
 
   it('stays idle until a refusal is noted', () => {
     expect(forumCoolingDown(1_000)).toBe(false)

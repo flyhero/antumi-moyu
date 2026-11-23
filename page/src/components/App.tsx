@@ -21,7 +21,7 @@ import { usePageState } from '../use-page-state'
 import { useLikes } from '../use-likes'
 import { useReply } from '../use-reply'
 import { useUpload } from '../use-upload'
-import { clearForumCooldown, forumAccessState, onForumAccessChange } from '../forum-cooldown'
+import { clearForumCooldown, forumAccessState, forumCanResume, onForumAccessChange } from '../forum-cooldown'
 import { ForumAccessNotice } from './ForumAccessNotice'
 
 function isTyping(target: EventTarget | null): boolean {
@@ -36,6 +36,14 @@ export function App({ host }: { host: PageHost }) {
   const streamWanted = useRef(false)
   const [access, setAccess] = useState(forumAccessState)
   useEffect(() => onForumAccessChange(() => setAccess(forumAccessState())), [])
+  // A rate limit's wait ending changes nothing in the pause itself; render again so the buttons wake.
+  const [, setWaited] = useState(0)
+  useEffect(() => {
+    if (access?.kind !== 'rate-limit' || access.until <= Date.now()) return
+    const timer = setTimeout(() => setWaited((n) => n + 1), access.until - Date.now() + 50)
+    return () => clearTimeout(timer)
+  }, [access])
+  const refreshWaits = access !== null && !forumCanResume()
   const session = useForumSession(host)
   const store = usePageState(host)
   const reader = useReader(host, store, (thread, restoring) => {
@@ -134,11 +142,26 @@ export function App({ host }: { host: PageHost }) {
     if (result === 'closed') say(words.noTopic)
     if (result === 'last') say(words.noMore)
   }
-  const refresh = () => {
+  // Paused, every read is stopped before it leaves the page and its failure is hidden, so a refresh
+  // would do nothing visible. It resumes instead, as the notice's button does; a rate limit still
+  // waits out its time, with the buttons disabled meanwhile.
+  const resumeForum = () => {
+    clearForumCooldown()
+    void session.check()
+  }
+  const throughPause = (action: () => void) => () => {
+    if (forumAccessState()) {
+      if (!forumCanResume()) return
+      resumeForum()
+    }
+    action()
+  }
+  const refresh = throughPause(() => {
     setNotice(null)
     stream.finish()
     reader.refresh()
-  }
+  })
+  const refreshList = throughPause(() => reader.refreshList())
   const openInBrowser = () => {
     if (thread) host.open(thread.topic.url)
     else say(words.noTopic)
@@ -206,7 +229,8 @@ export function App({ host }: { host: PageHost }) {
         onCommunity={(id) => { setNotice(null); stream.finish(); reader.selectCommunity(id) }}
         onChannel={reader.selectChannel}
         onOpen={(one) => openTopic(one)}
-        onRefresh={reader.refreshList}
+        onRefresh={refreshList}
+        refreshWaits={refreshWaits}
         listWidth={store.state.listWidth}
         disguiseTitles={reader.saved.disguiseTitles}
         titleCovers={covers}
@@ -216,7 +240,7 @@ export function App({ host }: { host: PageHost }) {
         onListWidth={(width) => store.update((state) => state.listWidth === width ? state : { ...state, listWidth: width })}
       />
       <main className="chat-view">
-        <ChatHeader topic={topic} cover={headerCover} busy={busy} words={words} onRefresh={refresh} onOpen={openInBrowser} onJump={jump} onLeave={() => host.leave()}
+        <ChatHeader topic={topic} cover={headerCover} busy={busy} refreshWaits={refreshWaits} words={words} onRefresh={refresh} onOpen={openInBrowser} onJump={jump} onLeave={() => host.leave()}
           notifications={<NotificationsMenu inbox={notifications} words={words} locale={host.locale} now={now} onSelect={(item) => {
             setNotice(null)
             stream.finish()
@@ -226,8 +250,7 @@ export function App({ host }: { host: PageHost }) {
         <SessionBar session={session} words={words} />
         {reader.community && <ForumAccessNotice words={words} busy={session.busy}
           onVerify={() => void session.login()} onResume={() => {
-            clearForumCooldown()
-            void session.check()
+            resumeForum()
             reader.retry()
           }} />}
         <Conversation
