@@ -1,6 +1,6 @@
 {
   "id": "antumi.moyu-v2ex",
-  "version": "0.4.8",
+  "version": "0.4.9",
   "engines": { "antumi": ">=0.21.8-beta.1 <1.0.0" },
   "contributes": {
     "pages": [
