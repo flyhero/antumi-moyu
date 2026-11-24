@@ -41,6 +41,7 @@ export function useReader(host: PageHost, store: PageState, onOpened: (thread: T
   const caches = useMemo(() => ({ lists: new TtlCache<CachedList>(LIST_TTL), threads: new TtlCache<Thread>(THREAD_TTL) }), [account])
   // A newer request makes an older one's answer moot.
   const tickets = useRef({ list: 0, thread: 0 })
+  const writes = useRef(0)
   const retryThread = useRef<(() => void) | null>(null)
   const opened = useRef(onOpened)
   opened.current = onOpened
@@ -118,9 +119,10 @@ export function useReader(host: PageHost, store: PageState, onOpened: (thread: T
       return
     }
     setThread((previous) => (previous ? { ...previous, loading: page, error: null } : previous))
+    const beforeWrite = writes.current
     host.call<Thread>('thread', { community: topic.community, id: topic.id, page, ...locate, authenticated: account !== null }).then(
       (result) => {
-        caches.threads.set(`${topic.community}:${topic.id}:${result.page}`, result)
+        if (beforeWrite === writes.current) caches.threads.set(`${topic.community}:${topic.id}:${result.page}`, result)
         apply(result)
       },
       (error: unknown) => {
@@ -193,10 +195,12 @@ export function useReader(host: PageHost, store: PageState, onOpened: (thread: T
     fetchPage(topic, page, true, { replace: true, destination: location })
   }
 
-  const showSent = (topic: Topic, location: ReplyLocation = {}) => {
-    // Every previously cached page can be stale after a write.
+  const noteReply = () => {
+    // Keep the displayed pages still. A later read must ask the forum rather than reuse a copy
+    // from before this write, including a read that was already in flight when it completed.
+    writes.current++
     caches.threads.clear()
-    openAt(topic, { ...location, last: true })
+    caches.lists.clear()
   }
 
   const refreshList = () => {
@@ -226,7 +230,7 @@ export function useReader(host: PageHost, store: PageState, onOpened: (thread: T
     openTopic,
     nextPage,
     previousPage,
-    showSent,
+    noteReply,
     openAt,
     positionKey: thread ? scopeKey(thread.topic.community, account, thread.topic.id) : null,
     rememberPosition: (key: string, position: ReadingPosition) => setSaved((state) => savePosition(state, key, position)),

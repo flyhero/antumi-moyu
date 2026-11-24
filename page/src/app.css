@@ -392,8 +392,9 @@ body[data-resizing-list] { cursor: col-resize; user-select: none; }
 .chat-turn-head-model { min-width: 0; overflow: hidden; color: var(--text-3); text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .chat-turn-head-model::before { content: '·'; margin-right: 8px; }
 
-.chat-pending-replies { margin-top: 8px; }
-.chat-pending-reply .chat-turn-head { flex-wrap: wrap; }
+.chat-submitted-replies { margin-top: 8px; }
+.chat-submitted-reply .chat-turn-head { flex-wrap: wrap; }
+.chat-sent-status { color: var(--text-muted); }
 .chat-pending-badge {
   padding: 1px 7px;
   border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);

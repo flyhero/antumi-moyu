@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { h, render } from 'preact'
 import { act } from 'preact/test-utils'
-import type { CommunityId, NotificationPage, ReplyResult, Thread, Topic } from '../../src/community'
+import type { CommunityId, NotificationPage, Post, ReplyResult, Thread, Topic } from '../../src/community'
 import { App } from './components/App'
 import type { PageHost } from './host'
 import { readSavedState } from './saved-state'
@@ -10,11 +10,13 @@ import { focusCheckDelay, focusCheckInterval } from './use-forum-session'
 import { clearForumCooldown, noteForumRefusal } from './forum-cooldown'
 import { forumRequests } from './forum-requests'
 import { builtinCovers, coverFor } from './title-disguise'
+import * as forumHtml from './forum-html'
 
 const topic: Topic = { community: 'linuxdo', id: '42', title: 'A long topic', author: 'bob', avatar: null, channel: null, replies: 60, time: null, url: 'https://linux.do/t/topic/42' }
 const another = { ...topic, id: '43', title: 'Another topic' }
 const third = { ...topic, id: '44', title: 'Third topic' }
 const pictured = '<p><a class="lightbox" href="https://cdn.example/original.png"><img src="https://cdn.example/thumb.png" alt="Shot" width="640" height="480"></a></p>'
+const ownPost = (floor: number, html = '<p>Canonical reply</p>'): Post => ({ id: String(floor * 100), floor, author: 'alice', avatar: null, html, time: null, replyTo: null, likes: 0, byAuthor: false })
 let withOpening = false
 function thread(one: Topic, page: number): Thread {
   const opening = withOpening && page === 1 ? { id: one.community === 'v2ex' ? one.id : '100', floor: one.community === 'v2ex' ? 0 : 1, author: 'carol', avatar: null, html: pictured, time: null, replyTo: null, likes: 2, liked: false, byAuthor: true } : null
@@ -31,6 +33,7 @@ function fixture(initial: unknown = null, community: CommunityId = 'linuxdo') {
   let blockedReply: Promise<ReplyResult> | null = null
   let blockedSession: Promise<{ username: string; unreadNotifications: number } | null> | null = null
   let blockedNotifications: Promise<NotificationPage> | null = null
+  const receivedPosts = new Map<string, Post[]>()
   let notificationsFailAt: number | null = null
   let readFails = false
   let unread = 3
@@ -54,7 +57,9 @@ function fixture(initial: unknown = null, community: CommunityId = 'linuxdo') {
     if (method === 'thread') {
       if (nextThreadFails) { nextThreadFails = false; throw new Error('Read failed') }
       const input = JSON.parse(JSON.stringify(params))
-      return thread({ ...([topic, another, third].find((topic) => topic.id === input.id) ?? topic), community }, input.floor || input.tail ? 3 : input.page ?? 1)
+      const result = thread({ ...([topic, another, third].find((topic) => topic.id === input.id) ?? topic), community }, input.floor || input.tail ? 3 : input.page ?? 1)
+      const fresh = (receivedPosts.get(input.id) ?? []).filter((post) => Math.ceil(post.floor / 20) === result.page)
+      return { ...result, posts: [...new Map([...result.posts, ...fresh].map((post) => [post.floor, post])).values()].sort((a, b) => a.floor - b.floor) }
     }
     if (method === 'reply') return blockedReply ?? result
     if (method === 'upload') return { state: 'done', markdown: '![shot|2x2](upload://abc.png)' }
@@ -96,7 +101,7 @@ function fixture(initial: unknown = null, community: CommunityId = 'linuxdo') {
     holdNotifications: () => { const pending = { resolve: (_result: NotificationPage) => {} }; blockedNotifications = new Promise((resolve) => { pending.resolve = resolve }); return pending },
     failNextThread: () => { nextThreadFails = true }, holdReply: () => { const pending = { resolve: (_result: ReplyResult) => {} }; blockedReply = new Promise((resolve) => { pending.resolve = resolve }); return pending },
     holdSession: () => { const pending = { resolve: (_result: { username: string; unreadNotifications: number } | null) => {} }; blockedSession = new Promise((resolve) => { pending.resolve = resolve }); return pending },
-    saved: () => readSavedState(state), result: (next: ReplyResult) => { result = next }, account: (next: string | null) => { account = next }, rejectStorage: () => { rejectStorage = true } }
+    saved: () => readSavedState(state), result: (next: ReplyResult) => { result = next }, posts: (id: string, posts: Post[]) => { receivedPosts.set(id, posts) }, account: (next: string | null) => { account = next }, rejectStorage: () => { rejectStorage = true } }
 }
 let root: HTMLDivElement | null = null
 async function settle() { await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)) }) }
@@ -272,17 +277,98 @@ describe('reader sessions', () => {
     expect(input().value).toBe('Login draft')
   })
 
-  it('locates a confirmed reply on its page and clears only its saved draft', async () => {
-    const f = fixture()
-    await mount(f.host); await openTopic(); await type('Sent'); await click('发送回复')
-    expect(f.calls).toHaveBeenCalledWith('thread', expect.objectContaining({ id: '42', floor: 60 }))
-    expect(document.querySelector('#floor-60[data-flash]')).not.toBeNull()
-    expect(f.saved().drafts['linuxdo:alice:42']).toBeUndefined()
+  it.each<CommunityId>(['linuxdo', 'v2ex'])('appends a confirmed %s reply without refreshing either the topic or the list', async (community) => {
+    const f = fixture(null, community)
+    const scroll = vi.spyOn(Element.prototype, 'scrollIntoView')
+    await mount(f.host); await openTopic(); await click('回复 #19 @bob'); await type('Sent\n<img src=x onerror=alert(1)>')
+    const before = document.querySelector('#floor-19')
+    await click('发送回复')
+    expect(f.calls.mock.calls.filter(([method]) => method === 'thread')).toHaveLength(1)
+    expect(f.calls.mock.calls.filter(([method]) => method === 'list')).toHaveLength(1)
+    expect(document.querySelector('#floor-19')).toBe(before)
+    const sent = document.querySelector('.chat-sent-reply')
+    expect(sent?.id).toBe('floor-60')
+    expect(sent?.textContent).toContain('回复已发送')
+    expect(sent?.textContent).toContain('回复 #19 @bob')
+    expect(sent?.querySelector('.chat-pending-text')?.textContent).toBe('Sent\n<img src=x onerror=alert(1)>')
+    expect(sent?.querySelector('img')).toBeNull()
+    expect(sent?.hasAttribute('data-reading-floor')).toBe(false)
+    expect(scroll.mock.contexts).toContain(sent)
+    expect(f.saved().drafts[`${community}:alice:42`]).toBeUndefined()
     expect(input().value).toBe('')
-    expect(button('加载前面的回复').disabled).toBe(false)
-    await click('加载前面的回复')
-    expect(document.querySelector('#floor-40')).not.toBeNull()
-    expect(document.querySelector('#floor-60')).not.toBeNull()
+  })
+
+  it('uses the shared HTML renderer, then places the authoritative reply among other replies exactly once', async () => {
+    const f = fixture()
+    const renderHtml = vi.spyOn(forumHtml, 'renderForumHtml')
+    const post = ownPost(60, '<p><strong>Formatted reply</strong><script>alert(1)</script></p>')
+    f.result({ state: 'sent', message: null, location: { postId: '6000', floor: 60 }, post })
+    await mount(f.host); await openTopic(); await type('**Formatted reply**'); await click('发送回复')
+    expect(document.querySelector('.chat-sent-reply strong')?.textContent).toBe('Formatted reply')
+    // Happy DOM's iterator skips descendants when DOMPurify removes their parent. Assert the
+    // shared rendering path here; HTML sanitization also needs verification in a real browser.
+    expect(renderHtml).toHaveBeenCalledWith(post.html, expect.objectContaining({ showImages: false }))
+    expect(f.saved().read['linuxdo:42']).toBe(20)
+    expect(f.calls.mock.calls.filter(([method]) => method === 'thread')).toHaveLength(1)
+    await type('Next draft')
+    f.posts('42', [ownPost(60, '<p>Authoritative reply</p>')])
+    await click('加载更多回复')
+    expect(document.querySelector('.chat-sent-reply')).not.toBeNull()
+    await click('加载更多回复')
+    expect(document.querySelector('.chat-sent-reply')).toBeNull()
+    expect(document.querySelectorAll('#floor-60')).toHaveLength(1)
+    expect(document.querySelector('#floor-60 .chat-markdown')?.textContent).toBe('Authoritative reply')
+    const floors = [...document.querySelectorAll('[data-reading-floor]')].map((row) => Number(row.getAttribute('data-reading-floor')))
+    expect(floors).toEqual([19, 20, 39, 40, 59, 60])
+    expect(input().value).toBe('Next draft')
+    expect(f.calls.mock.calls.filter(([method]) => method === 'reply')).toHaveLength(1)
+  })
+
+  it('reconciles each of several sent replies only when its own public page is loaded', async () => {
+    const f = fixture()
+    await mount(f.host); await openTopic()
+    for (const floor of [40, 60]) {
+      f.result({ state: 'sent', message: null, location: { floor, postId: String(floor * 100) } })
+      await type(`Sent ${floor}`); await click('发送回复')
+    }
+    expect(document.querySelectorAll('.chat-sent-reply')).toHaveLength(2)
+    f.posts('42', [ownPost(40), ownPost(60)])
+    await click('加载更多回复')
+    expect(document.querySelectorAll('.chat-sent-reply')).toHaveLength(1)
+    expect(document.querySelector('.chat-sent-reply')?.id).toBe('floor-60')
+    expect(document.querySelectorAll('#floor-40')).toHaveLength(1)
+    await click('加载更多回复')
+    expect(document.querySelectorAll('.chat-sent-reply')).toHaveLength(0)
+    expect(document.querySelectorAll('#floor-60')).toHaveLength(1)
+  })
+
+  it('does not append a duplicate if a read already contains the sent reply when its acknowledgement arrives', async () => {
+    const f = fixture(); const pending = f.holdReply()
+    await mount(f.host); await openTopic(); await type('Sent'); await click('发送回复')
+    f.posts('42', [ownPost(60)])
+    await click('加载更多回复'); await click('加载更多回复')
+    await act(async () => pending.resolve({ state: 'sent', message: null, location: { postId: '6000', floor: 60 } })); await settle()
+    expect(document.querySelector('.chat-sent-reply')).toBeNull()
+    expect(document.querySelectorAll('#floor-60')).toHaveLength(1)
+    expect(f.calls.mock.calls.filter(([method]) => method === 'thread')).toHaveLength(3)
+  })
+
+  it('shows a confirmed reply without inventing a floor when the response supplies none', async () => {
+    const f = fixture(); f.result({ state: 'sent', message: null })
+    await mount(f.host); await openTopic(); await type('Confirmed without a floor'); await click('发送回复')
+    expect(document.querySelector('.chat-sent-reply')?.textContent).toContain('Confirmed without a floor')
+    expect(document.querySelector('.chat-sent-reply .chat-turn-head-model')).toBeNull()
+    expect(document.querySelector('.chat-sent-reply')?.id).toBe('')
+    expect(f.calls.mock.calls.filter(([method]) => method === 'thread')).toHaveLength(1)
+  })
+
+  it('keeps appended successful replies private to the sending account', async () => {
+    const f = fixture()
+    await mount(f.host); await openTopic(); await type('My sent reply'); await click('发送回复')
+    f.account('bob'); await click('检查登录状态'); await openTopic()
+    expect(document.querySelector('.chat-sent-reply')).toBeNull()
+    f.account('alice'); await click('检查登录状态'); await openTopic()
+    expect(document.querySelector('.chat-sent-reply')?.textContent).toContain('My sent reply')
   })
 
   it('closes the floor jump panel when clicking elsewhere', async () => {
@@ -514,14 +600,22 @@ describe('reader sessions', () => {
     expect(document.querySelector('.conversation-title')?.textContent).toBe('Another topic')
     expect(f.saved().drafts['linuxdo:alice:43']?.text).toBe('Keep B')
     expect(f.saved().drafts['linuxdo:alice:42']).toBeUndefined()
+    expect(document.querySelector('.chat-sent-reply')).toBeNull()
+    await openTopic()
+    expect(document.querySelector('.chat-sent-reply')?.textContent).toContain('Send A')
   })
 
-  it('retains the new-reply destination when its first read fails and is retried', async () => {
+  it('keeps an appended reply through a failed manual refresh and retry without resending it', async () => {
     const f = fixture(); await mount(f.host); await openTopic(); await type('Send')
-    f.failNextThread(); await click('发送回复'); await click('重试')
+    f.failNextThread(); await click('发送回复')
+    expect(document.querySelector('.chat-sent-reply')?.textContent).toContain('Send')
+    await click('刷新（r）')
+    expect(document.querySelector('.chat-sent-reply')?.textContent).toContain('Send')
+    await click('重试')
     const reads = f.calls.mock.calls.filter(([method]) => method === 'thread')
-    expect(reads.at(-1)?.[1]).toMatchObject({ floor: 60 })
-    expect(document.querySelector('#floor-60[data-flash]')).not.toBeNull()
+    expect(reads).toHaveLength(3)
+    expect(document.querySelector('.chat-sent-reply')?.textContent).toContain('Send')
+    expect(f.calls.mock.calls.filter(([method]) => method === 'reply')).toHaveLength(1)
   })
 
   it('flushes the last scrolled floor and its offset when the page closes', async () => {

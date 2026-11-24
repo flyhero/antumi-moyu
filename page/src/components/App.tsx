@@ -58,11 +58,10 @@ export function App({ host }: { host: PageHost }) {
   const input = useRef<HTMLTextAreaElement>(null)
   const escape = useMemo(() => doublePress(1000), [])
   const thread = reader.thread
-  const reply = useReply(host, thread?.topic ?? null, session.account?.username ?? null, store, (topic, result) => {
-    stream.finish()
-    if (result.state === 'sent') reader.showSent(topic, result.location)
-    reader.refreshList()
-  })
+  const reply = useReply(host, thread?.topic ?? null, session.account?.username ?? null, store, (_topic, result, current) => {
+    if (current) stream.finish()
+    if (result.state === 'sent') reader.noteReply()
+  }, thread?.pages)
   const upload = useUpload(host, words, input, `${thread?.topic.community ?? ''}:${thread?.topic.id ?? ''}:${session.account?.username ?? ''}`, reply.text, reply.setText)
   const likes = useLikes(host, thread?.topic ?? null, session.account?.username ?? null, (text) => setNotice(text))
   const notifications = useNotifications(host, reader.community?.id ?? null, session.account)
@@ -259,7 +258,7 @@ export function App({ host }: { host: PageHost }) {
           key={topic ? `${topic.community}:${topic.id}` : 'none'}
           thread={thread}
           paused={access !== null}
-          pendingReplies={reply.pending}
+          submittedReplies={reply.submitted}
           notice={notice}
           failure={failure}
           words={words}

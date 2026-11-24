@@ -72,7 +72,7 @@ export const ReplyParams = z.object({
   content: z.string().trim().min(1).max(8000),
   target: ReplyTarget.optional()
 })
-export const ReplyLocation = z.object({ floor: z.number().int().positive().optional(), page: z.number().int().min(1).max(1000).optional() })
+export const ReplyLocation = z.object({ postId: z.string().regex(/^\d{1,16}$/).optional(), floor: z.number().int().positive().optional(), page: z.number().int().min(1).max(1000).optional() })
 export type ReplyLocation = z.infer<typeof ReplyLocation>
 export const ReplyFailure = z.object({
   kind: z.enum(['login', 'rate-limit', 'unconfirmed', 'rejected']),
@@ -81,7 +81,7 @@ export const ReplyFailure = z.object({
 })
 export type ReplyFailure = z.infer<typeof ReplyFailure>
 export const ReplyResult = z.discriminatedUnion('state', [
-  z.object({ state: z.literal('sent'), message: z.string().nullable(), location: ReplyLocation.optional() }),
+  z.object({ state: z.literal('sent'), message: z.string().nullable(), location: ReplyLocation.optional(), post: Post.optional() }),
   z.object({ state: z.literal('pending'), message: z.string().nullable() }),
   z.object({ state: z.literal('failed'), failure: ReplyFailure })
 ])

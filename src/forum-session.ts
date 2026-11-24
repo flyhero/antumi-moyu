@@ -4,6 +4,7 @@ import type { PluginBrowserResponse, PluginPageContext } from '@antumi/plugin-sd
 import { ReplyParams, type CommunityId, type ForumAccount, type ReplyFailure, type ReplyResult } from './community.js'
 import { parseJson } from './json-body.js'
 import { forumRefusal } from './forum-refusal.js'
+import { linuxdoPost, RawPost } from './communities/linuxdo.js'
 
 class ReplyError extends Error {
   constructor(readonly failure: ReplyFailure) { super(failure.message) }
@@ -114,14 +115,17 @@ export async function sendForumReply(community: CommunityId, params: unknown, co
   }
   if (community === 'linuxdo') {
     if (response.status === 429 || response.status === 401 || response.status === 403) checkedSite(response)
-    const result = z.object({ id: z.number().optional(), post_number: z.number().int().positive().optional(), post: z.object({ id: z.number(), post_number: z.number().int().positive().optional() }).optional(), action: z.string().optional(), errors: z.array(z.string()).optional() }).safeParse(parseJson(response.body, 'linux.do'))
+    const result = z.object({ id: z.number().int().positive().optional(), post_number: z.number().int().positive().optional(), post: z.object({ id: z.number().int().positive(), post_number: z.number().int().positive().optional() }).passthrough().optional(), action: z.string().optional(), errors: z.array(z.string()).optional() }).passthrough().safeParse(parseJson(response.body, 'linux.do'))
     if (result.success) {
       if (result.data.errors?.length) throw new ReplyError({ kind: 'rejected', message: result.data.errors.join('；') })
       if (response.status < 200 || response.status >= 300) throw new Error(`站点返回了 ${response.status}`)
       if (result.data.action === 'enqueued') return { state: 'pending', message: '回复已提交，等待社区审核' }
       if (result.data.id || result.data.post?.id) {
         const floor = result.data.post_number ?? result.data.post?.post_number
-        return { state: 'sent', message: null, ...(floor ? { location: { floor } } : {}) }
+        const postId = String(result.data.post?.id ?? result.data.id)
+        const raw = RawPost.safeParse(result.data.post ?? result.data)
+        const post = raw.success && typeof raw.data.cooked === 'string' ? linuxdoPost(raw.data, null) : undefined
+        return { state: 'sent', message: null, location: { postId, ...(floor ? { floor } : {}) }, ...(post ? { post } : {}) }
       }
     }
   } else {
@@ -149,7 +153,8 @@ export async function sendForumReply(community: CommunityId, params: unknown, co
     })
     if (posted) {
       const floor = Number($(posted).find('.no').first().text().trim())
-      return { state: 'sent', message: null, ...(Number.isInteger(floor) && floor > 0 ? { location: { floor } } : {}) }
+      const postId = /^r_(\d{1,16})$/.exec($(posted).attr('id') ?? '')?.[1]
+      return { state: 'sent', message: null, location: { ...(postId ? { postId } : {}), ...(Number.isInteger(floor) && floor > 0 ? { floor } : {}) } }
     }
   }
   throw unconfirmed()

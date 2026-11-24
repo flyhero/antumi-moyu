@@ -6,19 +6,19 @@ import type { Post } from '../../../src/community'
 import type { Words } from '../dictionary'
 import type { PageHost } from '../host'
 import type { ThreadState } from '../use-reader'
-import type { PendingReply } from '../use-reply'
+import { receivedReply, type SubmittedReply } from '../submitted-reply'
 import { AssistantNotice, ChatNotice } from './ChatNotice'
 import { ChevronDownIcon } from './icons'
 import { OpeningMessage } from './OpeningMessage'
-import { PendingReplyTurn } from './PendingReplyTurn'
+import { SubmittedReplyTurn } from './SubmittedReplyTurn'
 import { ReplyTurn } from './ReplyTurn'
 import { WorkingLine } from './WorkingLine'
 
 // The thread as a conversation: the opening post as the user's message, each reply as a turn.
-export function Conversation({ thread, paused, pendingReplies, notice, failure, words, locale, now, showImages, disguiseAvatars, shown, onTyped, onRetry, onLoadMore, onJump, canReply, onReply, likes, onLoadPrevious, positionKey, onPosition }: {
+export function Conversation({ thread, paused, submittedReplies, notice, failure, words, locale, now, showImages, disguiseAvatars, shown, onTyped, onRetry, onLoadMore, onJump, canReply, onReply, likes, onLoadPrevious, positionKey, onPosition }: {
   thread: ThreadState | null
   paused: boolean
-  pendingReplies: readonly PendingReply[]
+  submittedReplies: readonly SubmittedReply[]
   notice: string | null
   // What failed outside the thread (the communities, the list).
   failure: string | null
@@ -43,15 +43,20 @@ export function Conversation({ thread, paused, pendingReplies, notice, failure, 
   const list = useReadingPosition(positionKey, thread, shown !== null, onPosition)
   const said = useRef<HTMLDivElement>(null)
   const submitted = useRef<HTMLDivElement>(null)
-  const latestPending = pendingReplies.at(-1)?.id
+  const pages = thread?.pages ?? []
+  const received = pages.flatMap((page) => page.posts)
+  const local = submittedReplies.filter((reply) => !received.some((post) => receivedReply(reply, post)))
+  const latest = local.at(-1)?.id
+  const scrolled = useRef(0)
   useEffect(() => {
+    if (latest === undefined || latest <= scrolled.current) return
+    scrolled.current = latest
     submitted.current?.lastElementChild?.scrollIntoView({ block: 'start' })
-  }, [latestPending])
+  }, [latest])
   useEffect(() => {
     said.current?.scrollIntoView({ block: 'nearest' })
   }, [notice])
 
-  const pages = thread?.pages ?? []
   const last = pages.at(-1)
   const authors = new Map<number, string>()
   for (const page of pages) {
@@ -111,9 +116,9 @@ export function Conversation({ thread, paused, pendingReplies, notice, failure, 
           <button type="button" className="chat-more" onClick={onLoadMore}><ChevronDownIcon />{words.loadMore}</button>
         </div>
       )}
-      {thread && pendingReplies.length > 0 && <div ref={submitted} className="chat-pending-replies">
-        {pendingReplies.map((reply) => <PendingReplyTurn key={reply.id} reply={reply} community={thread.topic.community}
-          disguiseAvatars={disguiseAvatars} words={words} locale={locale} now={now} />)}
+      {thread && local.length > 0 && <div ref={submitted} className="chat-submitted-replies">
+        {local.map((reply) => <SubmittedReplyTurn key={reply.id} reply={reply} community={thread.topic.community}
+          disguiseAvatars={disguiseAvatars} words={words} locale={locale} now={now} showImages={showImages} />)}
       </div>}
       {notice && (
         <div ref={said} className="chat-said">

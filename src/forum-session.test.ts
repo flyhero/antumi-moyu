@@ -38,7 +38,7 @@ describe('forum sign-in and reply', () => {
 
   it('obtains fresh CSRF before posting a Discourse reply with the browser session', async () => {
     const h = harness([response('{"current_user":{"username":"alice"}}'), response('{"csrf":"fresh-csrf"}'), response('{"id":123}')])
-    expect(await sendForumReply('linuxdo', { id: '42', content: 'Hello world' }, h.context)).toEqual({ state: 'sent', message: null })
+    expect(await sendForumReply('linuxdo', { id: '42', content: 'Hello world' }, h.context)).toEqual({ state: 'sent', message: null, location: { postId: '123' } })
     expect(h.requests).toContainEqual(expect.objectContaining({ action: 'request', path: '/session/csrf', headers: expect.objectContaining({ 'x-requested-with': 'XMLHttpRequest' }) }))
     expect(h.requests.at(-1)).toMatchObject({ path: '/posts.json', method: 'POST', headers: { 'x-csrf-token': 'fresh-csrf' }, body: 'topic_id=42&raw=Hello+world' })
   })
@@ -173,7 +173,20 @@ describe('reply outcomes for the page', () => {
   })
   it('returns the native Discourse floor for locating the new reply', async () => {
     const h = harness([response('{"current_user":{"username":"alice"}}'), response('{"csrf":"csrf"}'), response('{"id":123,"post_number":47}', 201)])
-    expect(await replyOutcome('linuxdo', { id: '42', content: 'Reply' }, h.context)).toMatchObject({ state: 'sent', location: { floor: 47 } })
+    expect(await replyOutcome('linuxdo', { id: '42', content: 'Reply' }, h.context)).toMatchObject({ state: 'sent', location: { postId: '123', floor: 47 } })
+  })
+
+  it.each([false, true])('returns the cooked Discourse post from the send response without reading the thread (wrapped: %s)', async (wrapped) => {
+    const post = { id: 123, post_number: 47, username: 'alice', avatar_template: '/user_avatar/linux.do/alice/{size}/1.png',
+      cooked: '<p><strong>Reply</strong><img class="emoji" src="/images/emoji/smile.png"></p>', created_at: '2026-11-24T01:00:00.000Z', reply_to_post_number: 16 }
+    const h = harness([response('{"current_user":{"username":"alice"}}'), response('{"csrf":"csrf"}'), response(JSON.stringify(wrapped ? { post } : post), 201)])
+    expect(await replyOutcome('linuxdo', { id: '42', content: '**Reply**', target: { floor: 16, author: 'bob' } }, h.context)).toMatchObject({
+      state: 'sent', location: { postId: '123', floor: 47 },
+      post: { id: '123', floor: 47, author: 'alice', avatar: 'https://cdn.ldstatic.com/user_avatar/linux.do/alice/96/1.png',
+        html: '<p><strong>Reply</strong><img class="emoji" src="https://cdn.ldstatic.com/images/emoji/smile.png"></p>', time: Date.parse(post.created_at), replyTo: 16 }
+    })
+    expect(h.requests.filter((request) => request.action === 'request')).toHaveLength(3)
+    expect(h.requests.some((request) => request.action === 'request' && request.path.startsWith('/t/'))).toBe(false)
   })
 
   it('classifies expired login before sending', async () => {

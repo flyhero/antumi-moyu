@@ -112,7 +112,7 @@ function readable(raw: RawPost): boolean {
   return (raw.post_type ?? 1) === 1 && !raw.hidden && !raw.deleted_at && !raw.user_deleted
 }
 
-function toPost(raw: RawPost, authorId: number | null): Post {
+export function linuxdoPost(raw: RawPost, authorId: number | null): Post {
   const liked = likedOf(raw)
   return {
     id: String(raw.id),
@@ -192,8 +192,8 @@ export function linuxdo(get: Get = httpGet): Community {
       const first = page === 1 ? visible.find((post) => post.post_number === 1) : undefined
       // Page 1 can fall back to the opening post's id; later pages only have the topic's id.
       const authorId = raw.user_id ?? raw.details?.created_by?.id ?? first?.user_id ?? null
-      const opening = first ? { ...toPost(first, authorId), byAuthor: true } : null
-      const posts = visible.filter((post) => post !== first).map((post) => toPost(post, authorId))
+      const opening = first ? { ...linuxdoPost(first, authorId), byAuthor: true } : null
+      const posts = visible.filter((post) => post !== first).map((post) => linuxdoPost(post, authorId))
 
       // Post numbers skip removed posts, so position comes from the stream of ids: more is whether
       // the last post this page loaded is short of the stream's end.

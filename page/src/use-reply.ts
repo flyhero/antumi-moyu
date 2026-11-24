@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
-import { ReplyResult, type ReplyFailure, type ReplyTarget, type Topic } from '../../src/community'
+import { ReplyResult, type ReplyFailure, type ReplyTarget, type Thread, type Topic } from '../../src/community'
 import type { PageHost } from './host'
 import type { PageState } from './use-page-state'
 import { scopeKey, type Draft } from './saved-state'
 import { callReader, errorMessage } from './reader-client'
 import { ForumRequestBlocked } from './forum-cooldown'
+import { receivedReply, type SubmittedReply } from './submitted-reply'
 
 const EMPTY: Draft = { text: '', target: null, uncertain: false }
-export type PendingReply = { id: number; text: string; target: ReplyTarget | null; author: string; time: number }
-const NO_PENDING: readonly PendingReply[] = []
+const NO_SUBMISSIONS: readonly SubmittedReply[] = []
 type Feedback = { key: string; text: string; error: boolean; failure?: ReplyFailure }
 
-export function useReply(host: PageHost, topic: Topic | null, username: string | null, store: PageState, onSent: (topic: Topic, result: ReplyResult) => void) {
+export function useReply(host: PageHost, topic: Topic | null, username: string | null, store: PageState, onSent: (topic: Topic, result: ReplyResult, current: boolean) => void, pages?: readonly Thread[]) {
   const key = topic && username ? scopeKey(topic.community, username, topic.id) : ''
   const current = useRef(key)
   current.current = key
@@ -20,10 +20,18 @@ export function useReply(host: PageHost, topic: Topic | null, username: string |
   const alive = useRef(true)
   useEffect(() => () => { alive.current = false }, [])
   const [feedback, setFeedback] = useState<Feedback | null>(null)
-  // The queue response has no public post id or floor. Keep submitted text in this page's memory,
-  // scoped like drafts, without pretending a later topic read confirms its moderation status.
-  const [pending, setPending] = useState<Record<string, readonly PendingReply[]>>({})
-  const nextPendingId = useRef(0)
+  // Confirmed submissions stay in memory until a thread read brings back their public posts.
+  // Moderation acknowledgements carry no public identity, so those remain visibly pending.
+  const [submitted, setSubmitted] = useState<Record<string, readonly SubmittedReply[]>>({})
+  const nextId = useRef(0)
+  const local = submitted[key] ?? NO_SUBMISSIONS
+  useEffect(() => {
+    if (!pages || local.length === 0) return
+    const posts = pages.flatMap((page) => page.posts)
+    const remaining = local.filter((reply) => !posts.some((post) => receivedReply(reply, post)))
+    if (remaining.length === local.length) return
+    setSubmitted((before) => ({ ...before, [key]: remaining }))
+  }, [key, pages, local])
   const [cooldown, setCooldown] = useState<{ key: string; until: number } | null>(null)
   useEffect(() => {
     if (!cooldown) return
@@ -70,11 +78,9 @@ export function useReply(host: PageHost, topic: Topic | null, username: string |
         delete drafts[key]
         return { ...state, drafts }
       })
-      if (result.state === 'pending') {
-        const submitted: PendingReply = { id: ++nextPendingId.current, text, target, author: username, time: Date.now() }
-        setPending((before) => ({ ...before, [key]: [...(before[key] ?? []), submitted] }))
-      } else setFeedback({ key, text: result.message ?? '', error: false })
-      if (current.current === key) onSent(topic, result)
+      const submission: SubmittedReply = { id: ++nextId.current, text, target, author: username, time: Date.now(), result }
+      setSubmitted((before) => ({ ...before, [key]: [...(before[key] ?? []), submission] }))
+      onSent(topic, result, current.current === key)
     } catch (error) {
       // A lost bridge response may hide a completed POST too.
       failed(error instanceof ForumRequestBlocked ? error.failure : { kind: 'unconfirmed', message: errorMessage(error) })
@@ -83,5 +89,5 @@ export function useReply(host: PageHost, topic: Topic | null, username: string |
       if (alive.current) setSending(false)
     }
   }
-  return { text, target, uncertain, cooling, setText, setTarget, allowResend, send, sending, pending: pending[key] ?? NO_PENDING, feedback: feedback?.key === key ? feedback : null }
+  return { text, target, uncertain, cooling, setText, setTarget, allowResend, send, sending, submitted: local, feedback: feedback?.key === key ? feedback : null }
 }
